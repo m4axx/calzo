@@ -3,13 +3,20 @@
 // la línea central del viewport.
 import { estado, emit, on, medirViewport, CAPITULOS, type CapId } from './estado.ts';
 import { onFrame, lenis, irA } from './motion.ts';
-import { clamp } from '../guion/util.ts';
+import { clamp, muelleCritico } from '../guion/util.ts';
 
 interface Medida { el: HTMLElement; top: number; alto: number; altoPista: number | null }
 const medidas = new Map<CapId, Medida>();
 let pendiente = false;
 let yPrev = -1;
 let tPrev = 0;
+// En táctil el scroll es nativo, con inercia: un gesto recorre varias
+// pantallas de golpe. La coreografía (e, p, activo) sigue a una y suavizada
+// con un muelle crítico, como hace Lenis con la rueda en escritorio. La
+// página se sigue moviendo con el dedo; solo la animación va detrás.
+const OMEGA_TACTIL = 7;
+let yCoreo = -1;
+let vCoreo = 0;
 
 export function medir(): void {
   medirViewport();
@@ -45,7 +52,7 @@ export function scrollDe(cap: CapId, v: number, fase: 'e' | 'p' = 'p'): number {
 }
 
 function actualizar(): void {
-  const y = scrollActual();
+  const y = yCoreo >= 0 ? yCoreo : scrollActual();
   const hs = estado.vp.hs || window.innerHeight;
   for (const id of CAPITULOS) {
     const m = medidas.get(id);
@@ -94,6 +101,12 @@ export function iniciarCapitulos(): void {
     estado.scroll.y = y;
     yPrev = y;
     tPrev = t;
+    if (estado.modo.tactil && !estado.modo.reducido) {
+      const salto = yCoreo < 0 || estado.scroll.saltando || dt <= 0 || Math.abs(y - yCoreo) > 3 * estado.vp.h;
+      if (salto) { yCoreo = y; vCoreo = 0; }
+      else [yCoreo, vCoreo] = muelleCritico(yCoreo, vCoreo, y, OMEGA_TACTIL, Math.min(dt, 0.05));
+      if (Math.abs(yCoreo - y) < 0.5 && Math.abs(vCoreo) < 1) { yCoreo = y; vCoreo = 0; }
+    }
     actualizar();
   }, 10);
 
