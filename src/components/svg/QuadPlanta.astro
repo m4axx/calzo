@@ -81,7 +81,7 @@ const cinchas: Array<[number, number, number, number]> = [
     <g class="l-rotulo" aria-hidden="true">
       <text x="52" y="36">ANILLA</text>
       <line class="l-guia" x1="232" y1="46" x2="304" y2="61" />
-      <text x="198" y="48">CALZO</text>
+      <text x="229" y="48" text-anchor="end">CALZO</text>
       <text x="304" y="147">CINCHA</text>
       <line class="l-guia" x1="302" y1="144" x2="289" y2="144" />
     </g>
@@ -121,4 +121,6 @@ const cinchas: Array<[number, number, number, number]> = [
     letter-spacing: .08em;
   }
   .l-guia { stroke: var(--l-cota); stroke-width: 1px; }
+  /* A ancho de móvil la lámina se imprime a ~0,85: el rótulo sube para seguir legible. */
+  @media (max-width: 600px) { .l-rotulo { font-size: 12px; letter-spacing: .06em; } }
 </style>

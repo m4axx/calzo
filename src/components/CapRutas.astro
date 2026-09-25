@@ -9,6 +9,10 @@ import { calcularPrecio, formatoKm } from '../lib/precio.js';
 import { DESTINO_DEFECTO, CARGA_DEFECTO, DESTINOS } from '../data/tarifas.js';
 
 const { rayos } = rosa();
+// A ancho de móvil la rosa se imprime a ~0,45: sus etiquetas se relajan aparte,
+// a un cuerpo mayor y con más holgura (la rosa ahí es un dibujo, no interfaz).
+const TAM_MOVIL = 20;
+const movil = new Map(rosa({ tam: TAM_MOVIL, tope: 100 }).rayos.map((r) => [r.id, r]));
 // Anillos de escala: la distancia es el dato que dibujan los rayos.
 const anillos = [250, 500, 750].map((km) => ({ km, r: Math.round((R_MAX * km / KM_MAX) * 10) / 10 }));
 
@@ -55,16 +59,20 @@ const s = (n: number) => String(n);
               <g data-revelar="fundido" data-revelar-dur="0.3" data-revelar-delay={s(r.ferry ? r.dur + 0.3 : r.dur)}>
                 <circle class:list={['rutas__punto', { 'rutas__punto--hueco': r.nautico }]}
                   cx={r.fin.x} cy={r.fin.y} r={r.nautico ? 4.5 : 3.2} />
-                {r.etiqueta.guia && (
-                  <line class="rutas__guia" x1={r.etiqueta.guia[0]} y1={r.etiqueta.guia[1]}
-                    x2={r.etiqueta.guia[2]} y2={r.etiqueta.guia[3]} />
-                )}
-                <text class="rutas__etq" x={r.etiqueta.x} y={r.etiqueta.y}
-                  text-anchor="middle" dominant-baseline="central">{r.nombre}</text>
-                {r.ferry && (
-                  <text class="rutas__etq rutas__etq--ferry" x={r.ferry.etiqueta.x} y={r.ferry.etiqueta.y}
-                    text-anchor="middle" dominant-baseline="central">+ ferry</text>
-                )}
+                {[{ r, v: 'amplia' }, { r: movil.get(r.id) ?? r, v: 'movil' }].map(({ r: m, v }) => (
+                  <g class={`rutas__etqs rutas__etqs--${v}`}>
+                    {m.etiqueta.guia && (
+                      <line class="rutas__guia" x1={m.etiqueta.guia[0]} y1={m.etiqueta.guia[1]}
+                        x2={m.etiqueta.guia[2]} y2={m.etiqueta.guia[3]} />
+                    )}
+                    <text class="rutas__etq" x={m.etiqueta.x} y={m.etiqueta.y}
+                      text-anchor="middle" dominant-baseline="central">{m.nombre}</text>
+                    {m.ferry && (
+                      <text class="rutas__etq rutas__etq--ferry" x={m.ferry.etiqueta.x} y={m.ferry.etiqueta.y}
+                        text-anchor="middle" dominant-baseline="central">+ ferry</text>
+                    )}
+                  </g>
+                ))}
               </g>
             </a>
           ))}
@@ -150,6 +158,17 @@ const s = (n: number) => String(n);
   .rutas__rayo.es-activo .rutas__mar { stroke: var(--hueso); }
   .rutas__rayo:focus-visible { outline: none; }
   .rutas__rayo:focus-visible .rutas__zona { stroke: color-mix(in srgb, var(--hueso) 14%, transparent); }
+
+  /* etiquetas: juego amplio o de móvil según el ancho al que se imprime la rosa */
+  .rutas__etqs--movil { display: none; }
+  @media (max-width: 767px) {
+    .rutas__etqs--amplia { display: none; }
+    .rutas__etqs--movil { display: inline; }
+    .rutas__etqs--movil .rutas__etq { font-size: 20px; stroke-width: 6px; }
+    .rutas__etqs--movil .rutas__etq--ferry { font-size: 17px; }
+    .rutas__etq--origen { font-size: 22px; stroke-width: 6px; }
+    .rutas__km, .rutas__norte { font-size: 18px; }
+  }
 
   /* compacto: la rosa es un dibujo; la interfaz es la tabla */
   :global(html.compacto) .rutas__rayo { pointer-events: none; }

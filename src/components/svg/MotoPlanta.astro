@@ -1,6 +1,172 @@
 ---
-// STUB de WP0 — lo completa WP3 (§5.5). Planta cenital, viewBox 0 0 1200 640, morro a la derecha.
-interface Props { class?: string }
-const { class: cls } = Astro.props;
+// Planta cenital de la moto atada en X (§5.5, §7.4). Dueño: WP3.
+// viewBox 0 0 1200 640, morro a la derecha: svgX = 600 + 400·x, svgY = 320 + 400·z.
+// Contrato de props:
+//   class?: string
+//   compacto?: boolean   morro arriba: grupo girado −90° y viewBox 280 −280 640 1200
+//                        (la instancia del amarre la gira en el cliente según html.compacto)
+//
+// El frontmatter calcula, para cada cincha, el punto donde sale de la silueta en planta
+// (intersección del segmento anilla → ancla con los contornos de las piezas) y lo escribe
+// en data-bvis; moto-svg.ts lo proyecta con getScreenCTM() para publicar estado.cinchas2D.
+import { ANCLAS, ANCLAS_PLATAFORMA } from '../../three/contrato-tipos.ts';
+
+interface Props { class?: string; compacto?: boolean }
+const { class: cls, compacto = false } = Astro.props;
+
+type V = [number, number];
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const S = (p: V): V => [600 + 400 * p[0], 320 + 400 * p[1]];
+const n2 = (p: V) => `${r1(p[0])} ${r1(p[1])}`;
+const FONDO = 'fill:var(--ml-fondo,#0B0D0E)';
+const path = (d: string, estilo = '', extra = '') => `<path d="${d}"${estilo ? ` style="${estilo}"` : ''}${extra}/>`;
+const lin = (pts: V[], cerrado = false) => 'M' + pts.map((p) => n2(S(p))).join('L') + (cerrado ? 'Z' : '');
+function suave(pts: V[], cerrado: boolean): string {
+  const q = pts.map(S), n = q.length;
+  const P = (i: number) => cerrado ? q[(i + n) % n] : q[Math.max(0, Math.min(n - 1, i))];
+  let d = `M${n2(q[0])}`;
+  for (let i = 0; i < (cerrado ? n : n - 1); i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+    d += `C${n2([p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6])} ${n2([p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6])} ${n2(p2)}`;
+  }
+  return d + (cerrado ? 'Z' : '');
+}
+
+// Contornos (metros) que tapan la cinta vista desde arriba: se usan para el dibujo y para bvis.
+const siluetas: V[][] = [];
+const caja = (x0: number, x1: number, z0: number, z1: number): V[] => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+function pieza(pts: V[], d: string): string { siluetas.push(pts); return d; }
+const rectM = (x0: number, x1: number, z0: number, z1: number, rx: number, extra = '') => {
+  const a = S([x0, z0]), b = S([x1, z1]);
+  return pieza(caja(x0, x1, z0, z1),
+    `<rect x="${r1(Math.min(a[0], b[0]))}" y="${r1(Math.min(a[1], b[1]))}" width="${r1(Math.abs(b[0] - a[0]))}" height="${r1(Math.abs(b[1] - a[1]))}" rx="${r1(rx * 400)}" style="${FONDO}"${extra}/>`);
+};
+
+const deposito: V[] = [[0.43, 0], [0.40, 0.08], [0.33, 0.13], [0.25, 0.16], [0.15, 0.17], [0.05, 0.16], [-0.02, 0.135], [-0.08, 0.14],
+  [-0.13, 0.11], [-0.155, 0], [-0.13, -0.11], [-0.08, -0.14], [-0.02, -0.135], [0.05, -0.16], [0.15, -0.17], [0.25, -0.16],
+  [0.33, -0.13], [0.40, -0.08]];
+const asiento: V[] = [[-0.115, 0.095], [-0.20, 0.13], [-0.45, 0.13], [-0.62, 0.112], [-0.72, 0.07], [-0.81, 0], [-0.72, -0.07],
+  [-0.62, -0.112], [-0.45, -0.13], [-0.20, -0.13], [-0.115, -0.095]];
+const faro: V[] = [[0.665, 0.09], [0.60, 0.088], [0.545, 0.065], [0.528, 0], [0.545, -0.065], [0.60, -0.088], [0.665, -0.09]];
+
+let moto = '';
+// Basculante (bajo el asiento), neumáticos, silencioso (lado −z), amortiguadores, estriberas y tapas del motor.
+for (const s of [1, -1]) moto += rectM(-0.725, -0.20, s * 0.1125, s * 0.1475, 0.008);
+moto += rectM(-1.035, -0.415, -0.085, 0.085, 0.05) + path(lin([[-1.02, 0], [-0.43, 0]]), '', ' stroke-dasharray="3 6" opacity=".45"');
+moto += pieza([[-0.35, -0.11], [-0.78, -0.1375], [-0.80, -0.18], [-0.78, -0.2225], [-0.35, -0.21]],
+  path(suave([[-0.35, -0.11], [-0.78, -0.1375], [-0.80, -0.18], [-0.78, -0.2225], [-0.35, -0.21]], true), FONDO));
+for (const s of [1, -1]) {
+  moto += rectM(-0.62, -0.50, s * 0.10, s * 0.16, 0.02);
+  moto += rectM(-0.197, -0.163, s * 0.14, s * 0.225, 0.006) + path(lin([[-0.18, s * 0.16], [-0.18, s * 0.21]]), '', ' opacity=".5"');
+  moto += rectM(-0.10, 0.06, s * 0.125, s * 0.165, 0.015);
+}
+moto += pieza(asiento, path(suave(asiento, true), FONDO))
+  + path(suave([[-0.13, 0.075], [-0.21, 0.105], [-0.45, 0.106], [-0.60, 0.09], [-0.70, 0.052]], false), '', ' stroke-dasharray="3 3" opacity=".55"')
+  + path(suave([[-0.13, -0.075], [-0.21, -0.105], [-0.45, -0.106], [-0.60, -0.09], [-0.70, -0.052]], false), '', ' stroke-dasharray="3 3" opacity=".55"')
+  + path(lin([[-0.81, 0], [-0.84, 0.03], [-0.84, -0.03]], true), FONDO);
+moto += pieza(deposito, path(suave(deposito, true), FONDO))
+  + path(lin([[0.39, 0], [-0.12, 0]]), '', ' opacity=".35"')
+  + path(suave([[0.36, 0.06], [0.25, 0.115], [0.12, 0.13], [0.0, 0.11]], false), '', ' opacity=".4"')
+  + path(suave([[0.36, -0.06], [0.25, -0.115], [0.12, -0.13], [0.0, -0.11]], false), '', ' opacity=".4"')
+  + `<circle cx="${r1(S([0.18, 0])[0])}" cy="${r1(S([0.18, 0])[1])}" r="10"/>`;
+// Tren delantero: neumático, guardabarros, botellas, faro, tijas, reloj, manillar y mandos.
+moto += rectM(0.415, 1.035, -0.06, 0.06, 0.045) + rectM(0.442, 1.008, -0.065, 0.065, 0.03)
+  + path(lin([[0.46, 0], [0.99, 0]]), '', ' opacity=".3"');
+for (const s of [1, -1]) moto += rectM(0.43, 0.70, s * 0.072, s * 0.128, 0.028);
+moto += pieza(faro, path(suave(faro, false) + 'Z', FONDO)) + path(lin([[0.665, 0.09], [0.675, 0.07], [0.675, -0.07], [0.665, -0.09]]), '', ' opacity=".6"');
+moto += rectM(0.425, 0.475, -0.14, 0.14, 0.02);
+for (const s of [1, -1]) moto += `<circle cx="${r1(S([0.45, 0])[0])}" cy="${r1(S([0.45, s * 0.10])[1])}" r="12" style="${FONDO}"/><circle cx="${r1(S([0.45, 0])[0])}" cy="${r1(S([0.45, s * 0.10])[1])}" r="4"/>`;
+moto += `<circle cx="${r1(S([0.46, 0])[0])}" cy="${r1(S([0.46, 0])[1])}" r="22" style="${FONDO}"/><circle cx="${r1(S([0.46, 0])[0])}" cy="${r1(S([0.46, 0])[1])}" r="16" opacity=".5"/>`;
+{
+  const bar = lin([[0.40, 0.38], [0.43, 0.20], [0.44, 0], [0.43, -0.20], [0.40, -0.38]]);
+  // El manillar no entra en las siluetas: queda por detrás de las anclas de la tija (x < 0,45).
+  moto += path(bar, 'stroke-width:calc(8.8px + 2 * var(--ml-trazo,1.6px))') + path(bar, 'stroke:var(--ml-fondo,#0B0D0E);stroke-opacity:1;stroke-width:8.8px');
+}
+for (const s of [1, -1]) {
+  moto += rectM(0.384, 0.416, s * 0.25, s * 0.395, 0.012);
+  moto += rectM(0.382, 0.43, s * 0.27, s * 0.31, 0.008);
+  moto += path(suave([[0.43, s * 0.235], [0.465, s * 0.30], [0.47, s * 0.37]], false), 'stroke-width:calc(3px + var(--ml-trazo,1.6px))');
+}
+moto += rectM(0.43, 0.47, -0.20, -0.245, 0.008);
+
+// Cinchas: de la anilla (A) al ancla (B) sobre las diagonales z = ±0,2833·x (la X perfecta, §4.4).
+// Orden del_I, del_D, tras_I, tras_D (el de estado.cinchas2D).
+const CINCHAS: Array<{ a: V; b: V }> = [
+  { a: [ANCLAS_PLATAFORMA.anc_anilla_del_I[0], ANCLAS_PLATAFORMA.anc_anilla_del_I[2]], b: [ANCLAS.anc_cincha_tija_I[0], ANCLAS.anc_cincha_tija_I[2]] },
+  { a: [ANCLAS_PLATAFORMA.anc_anilla_del_D[0], ANCLAS_PLATAFORMA.anc_anilla_del_D[2]], b: [ANCLAS.anc_cincha_tija_D[0], ANCLAS.anc_cincha_tija_D[2]] },
+  { a: [ANCLAS_PLATAFORMA.anc_anilla_tras_I[0], ANCLAS_PLATAFORMA.anc_anilla_tras_I[2]], b: [ANCLAS.anc_cincha_tras_I[0], ANCLAS.anc_cincha_tras_I[2]] },
+  { a: [ANCLAS_PLATAFORMA.anc_anilla_tras_D[0], ANCLAS_PLATAFORMA.anc_anilla_tras_D[2]], b: [ANCLAS.anc_cincha_tras_D[0], ANCLAS.anc_cincha_tras_D[2]] },
+];
+/** Primera u ∈ [0, 1] en la que el segmento a → b entra en algún contorno (1 si no entra). */
+function salida(a: V, b: V): number {
+  let umin = 1;
+  const r: V = [b[0] - a[0], b[1] - a[1]];
+  for (const pol of siluetas) {
+    for (let i = 0; i < pol.length; i++) {
+      const p = pol[i], q = pol[(i + 1) % pol.length];
+      const s: V = [q[0] - p[0], q[1] - p[1]];
+      const den = r[0] * s[1] - r[1] * s[0];
+      if (Math.abs(den) < 1e-12) continue;
+      const t = ((p[0] - a[0]) * s[1] - (p[1] - a[1]) * s[0]) / den;
+      const v = ((p[0] - a[0]) * r[1] - (p[1] - a[1]) * r[0]) / den;
+      if (t >= 0 && t <= 1 && v >= 0 && v <= 1 && t < umin) umin = t;
+    }
+  }
+  return umin;
+}
+const ANCHO = 0.035 * 400; // la cinta 3D mide 35 mm (§4.4)
+const cintas = CINCHAS.map(({ a, b }) => {
+  const u = salida(a, b);
+  const bv: V = [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+  const A = S(a), B = S(bv), Bf = S(b);
+  const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy);
+  const n: V = [-dy / l * ANCHO / 2, dx / l * ANCHO / 2];
+  const d = `M${n2([A[0] + n[0], A[1] + n[1]])}L${n2([B[0] + n[0], B[1] + n[1]])}L${n2([B[0] - n[0], B[1] - n[1]])}L${n2([A[0] - n[0], A[1] - n[1]])}Z`;
+  return { A, B, Bf, d, ang: Math.atan2(dy, dx) * 180 / Math.PI };
+});
+
+const giro = compacto ? 'rotate(-90 600 320)' : undefined;
+const vb = compacto ? '280 -280 640 1200' : '0 0 1200 640';
 ---
-<svg class:list={['moto-planta', cls]} viewBox="0 0 1200 640" role="img" aria-label="Moto vista desde arriba, atada con cuatro cinchas en X"></svg>
+<svg class:list={['moto-planta', cls]} viewBox={vb} role="img" aria-label="Moto vista desde arriba, atada con cuatro cinchas en X">
+  <g class="mp-rot" transform={giro}>
+    <g class="mp-silueta">
+      <rect x="75.2" y="135.2" width="1049.6" height="369.6" rx="2" opacity=".45" />
+      <rect x="80" y="140" width="1040" height="360" rx="2" style="fill:var(--ml-fondo,#0B0D0E)" />
+      <path d="M80 152H1120M80 488H1120" opacity=".45" />
+    </g>
+    <g class="mp-cintas">
+      {cintas.map((c, i) => (
+        <path class="mp-cinta" data-cincha={i} d={c.d} data-a={n2(c.A)} data-b={n2(c.Bf)} data-bvis={n2(c.B)} />
+      ))}
+    </g>
+    <g class="mp-silueta">
+      {cintas.map((c) => (
+        <g class="mp-amarre">
+          <circle cx={r1(c.A[0])} cy={r1(c.A[1])} r="11" />
+          <circle cx={r1(c.A[0])} cy={r1(c.A[1])} r="6.5" />
+          <g transform={`translate(${r1(c.A[0])} ${r1(c.A[1])}) rotate(${r1(c.ang)})`}>
+            <rect x="10" y="-8" width="28" height="16" rx="2.5" style="fill:var(--ml-fondo,#0B0D0E)" />
+            <path d="M14 -3H34" opacity=".5" />
+          </g>
+        </g>
+      ))}
+      <g class="mp-moto" set:html={moto} />
+    </g>
+  </g>
+</svg>
+
+<style>
+  .moto-planta {
+    color: var(--hueso);
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-opacity: var(--ml-o, .6);
+    stroke-width: var(--ml-trazo, 1.6px);
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .mp-cinta { fill: var(--cincha); stroke: none; }
+  .mp-amarre { stroke: var(--aluminio); stroke-opacity: .9; }
+</style>

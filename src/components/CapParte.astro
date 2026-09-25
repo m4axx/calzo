@@ -40,7 +40,7 @@ const fotos = [
                 width="480" height="360" decoding="async"
               />
             </div>
-            <figcaption class="parte__pie">{f.pie}<span class="parte__ejemplo"> · Dibujo de ejemplo</span></figcaption>
+            <figcaption class="parte__pie">{f.pie} <span class="parte__ejemplo">Dibujo de ejemplo</span></figcaption>
           </figure>
         ))}
       </div>
@@ -128,11 +128,20 @@ const fotos = [
   .parte__marco img.cargada { opacity: 1; }
   .parte__dibujo { position: absolute; inset: 0; display: none; color: var(--tinta); }
   .parte__dibujo :global(svg) { width: 100%; height: 100%; }
+  /* MotoLinea sobre papel (contrato de WP3): tinta plena y fondo del hueco. El
+     recorte se imprime a ~0,5, así que la plumilla sube para seguir en ~1 px. */
+  .parte__dibujo :global(.moto-linea) {
+    color: var(--tinta);
+    --ml-fondo: color-mix(in srgb, var(--tinta) 5%, var(--papel));
+    --ml-o: .9;
+    --ml-trazo: 2.2px;
+  }
   .parte__dibujo--espejo { transform: scaleX(-1); }
   :global(html.fuente-svg) .parte__foto:not(.con-foto) .parte__dibujo { display: block; }
-  .parte__pie { font-size: .8125rem; color: var(--tinta); }
+  .parte__pie { font-size: .8125rem; line-height: 1.35; color: var(--tinta); }
+  @media (max-width: 479px) { .parte__pie { font-size: .75rem; } }
   .parte__ejemplo { display: none; color: var(--tinta-2); }
-  :global(html.fuente-svg) .parte__foto:not(.con-foto) .parte__ejemplo { display: inline; }
+  :global(html.fuente-svg) .parte__foto:not(.con-foto) .parte__ejemplo { display: block; }
 
   .parte__rotulo { font-weight: 600; letter-spacing: .04em; font-size: .8125rem; }
   /* Entrega y firma comparten la última franja de la hoja, separadas por un filete. */

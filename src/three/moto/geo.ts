@@ -395,3 +395,12 @@ export function facetar(g: THREE.BufferGeometry): THREE.BufferGeometry {
   n.computeVertexNormals();
   return n;
 }
+
+/** Polígono cerrado con todas las esquinas redondeadas (empieza y acaba a mitad de una arista). */
+export function poligonoRedondo(esquinas: readonly (readonly [number, number, number])[], pasos = 4): THREE.Shape {
+  const u = esquinas[esquinas.length - 1], v0 = esquinas[0];
+  const medio = [(u[0] + v0[0]) / 2, (u[1] + v0[1]) / 2, 0] as const;
+  const pts = redondear([medio, ...esquinas, medio], pasos);
+  pts.pop();
+  return new THREE.Shape(pts);
+}

@@ -1,16 +1,171 @@
 ---
-// STUB de WP0 — lo completa WP3 (§2.1).
+// 01 · El desvelado #pieza (§2.1). Dueño: WP3. El JS vive en capitulos/pieza.ts.
+// El texto es el LCP y está pintado desde el primer fotograma; la moto la pone el canvas
+// (fuente webgl) o MotoLinea (fuente svg), siempre por debajo de estas capas del DOM.
 import { calcularPrecio } from '../lib/precio.js';
+import { DESTINOS } from '../data/tarifas.js';
+import MotoLinea from './svg/MotoLinea.astro';
+import Chevron from './svg/Chevron.astro';
+import Flecha from './svg/Flecha.astro';
+
 const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
 ---
-<section id="pieza" class="cap cap--fija" data-cap="pieza" aria-labelledby="pieza-h">
+<section id="pieza" class="cap cap--fija pieza" data-cap="pieza" aria-labelledby="pieza-h">
   <div class="cap__pista" style="--fija-d: 80; --fija-m: 50">
     <div class="cap__escenario">
-      <h1 id="pieza-h" class="h1">
+      <MotoLinea definiciones />
+      <div class="pieza__suelo" aria-hidden="true"></div>
+      <figure class="pieza__moto">
+        <MotoLinea class="pieza__linea" barrido />
+        <img class="pieza__quieto" data-preset="quieto.pieza" alt="La moto de pie sobre su plataforma, en la sala a oscuras" width="1600" height="900" />
+      </figure>
+      <h1 id="pieza-h" class="h1 pieza__h1">
         <span class="h1__lema">Se sube atado. Se baja igual.</span>
         <span class="h1__servicio">Transporte de motos, quads y embarcaciones por carretera, desde Madrid a toda España.</span>
       </h1>
-      <p class="pieza__frase"><span data-precio="articulo">{r.articulo}</span> de Madrid a Valencia: <span data-precio="total">{r.totalTxt}</span></p>
+      <div class="pieza__frase">
+        <p class="pieza__precio">
+          <span data-precio="articulo">{r.articulo}</span> de Madrid a
+          <label class="sr" for="destino-heroe">Destino</label>
+          <span class="pieza__select">
+            <select id="destino-heroe" data-destino-select data-fase-p="0">
+              {DESTINOS.map((d) => <option value={d.id} selected={d.id === 'valencia'}>{d.nombre}</option>)}
+            </select>
+            <Chevron class="pieza__chevron" />
+          </span>: <span class="pieza__total" data-precio="total">{r.totalTxt}</span>
+        </p>
+        <p class="pieza__pie">
+          <span class="nota">Tarifa provisional</span>
+          <a class="pieza__enlace" href="#precio" data-fase-p="0">Ver desglose y reservar <Flecha /></a>
+        </p>
+      </div>
     </div>
   </div>
 </section>
+
+<style>
+  /* ——— base (sin JS o con movimiento reducido): flujo legible ——— */
+  .pieza .cap__escenario {
+    display: flex;
+    flex-direction: column;
+    gap: var(--e-1);
+    padding: calc(var(--e-2) + 3.5rem) var(--margin) var(--e-2);
+    max-width: var(--contenedor);
+    margin-inline: auto;
+  }
+  .pieza__h1 { order: 1; display: grid; gap: .6em; max-width: 12ch; }
+  .pieza__h1 .h1__servicio { max-width: 34ch; }
+  .pieza__moto { order: 2; position: relative; margin: 0; }
+  .pieza__frase { order: 3; }
+  .pieza__suelo { display: none; }
+
+  .pieza__linea { width: 100%; height: auto; }
+  .pieza__quieto { display: none; width: 100%; height: auto; opacity: 0; transition: opacity .2s var(--ease); }
+  .pieza__quieto:global(.cargada) { opacity: 1; }
+
+  .pieza__frase { display: grid; gap: .75rem; }
+  .pieza__precio { font-size: var(--t-entrada); line-height: 1.4; letter-spacing: -.005em; }
+  .pieza__total { font-family: var(--f-cifras); font-variant-numeric: tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
+  .pieza__select { position: relative; display: inline-block; white-space: nowrap; }
+  .pieza__select select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--ceniza);
+    border-radius: 0;
+    padding: 0 1.1em 0 0;
+    font: inherit;
+    color: var(--hueso);
+    cursor: pointer;
+  }
+  .pieza__select select:hover { border-bottom-color: var(--hueso); }
+  .pieza__select select option { background: var(--grafito-alto); color: var(--hueso); }
+  .pieza__select :global(.pieza__chevron) {
+    position: absolute; right: .1em; top: 50%; transform: translateY(-40%);
+    pointer-events: none; color: var(--ceniza);
+  }
+  .pieza__pie { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.25rem; }
+  .pieza__enlace {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: var(--t-cuerpo); text-decoration: none;
+    border-bottom: 1px solid var(--junta); padding-bottom: .1rem;
+  }
+  .pieza__enlace:hover { border-bottom-color: var(--hueso); }
+
+  /* Con JS la línea sigue el progreso real de carga; aparece a los 350 ms. */
+  :global(html.js) .pieza__suelo {
+    transform: scaleX(var(--carga, 0));
+    transition: transform .14s var(--ease);
+  }
+
+  /* Movimiento reducido: fotograma quieto (webgl) o MotoLinea estática (svg). */
+  :global(html.js.reducido) .pieza__linea { display: none; }
+  :global(html.js.reducido.fuente-svg) .pieza__linea { display: block; }
+  :global(html.js.reducido:not(.fuente-svg)) .pieza__quieto { display: block; }
+  :global(html.js.reducido:not(.fuente-svg)) .pieza__moto { aspect-ratio: 16 / 9; }
+
+  /* ——— coreografía: escenario fijo con capas absolutas sobre el canvas ——— */
+  :global(html.js:not(.reducido)) .pieza .cap__escenario {
+    display: block;
+    padding: 0;
+    max-width: none;
+    --izq: max(var(--margin), calc((100vw - var(--contenedor)) / 2 + var(--margin)));
+    --interior: calc(min(100vw, var(--contenedor)) - 2 * var(--margin));
+  }
+  :global(html.js:not(.reducido)) .pieza__suelo {
+    display: block;
+    position: absolute;
+    top: var(--suelo-y);
+    left: var(--suelo-x0);
+    width: calc(var(--suelo-x1) - var(--suelo-x0));
+    height: 1px;
+    background: var(--hueso);
+    opacity: 0;
+    transform-origin: 50% 50%;
+    animation: pieza-suelo 1ms linear .35s both;
+  }
+  :global(html.js:not(.reducido)) .pieza__suelo:global(.lista) { animation: none; opacity: var(--suelo-o, .7); }
+  @keyframes pieza-suelo { to { opacity: var(--suelo-o, .7); } }
+
+  /* La moto SVG: el punto (700, 600) del alzado cae en el centro de la línea de suelo;
+     1 m = 0,2·W en escritorio (0,4·W en compacto), así que 1 unidad = 0,0004·W. */
+  :global(html.js:not(.reducido)) .pieza__moto {
+    position: absolute;
+    left: calc((var(--suelo-x0) + var(--suelo-x1)) / 2 - 28vw);
+    top: calc(var(--suelo-y) - 24vw);
+    width: 56vw;
+    opacity: 0;
+    transition: opacity .4s var(--ease);
+    pointer-events: none;
+  }
+  :global(html.js.fuente-svg:not(.reducido)) .pieza__moto { opacity: 1; }
+  :global(html.js:not(.reducido)) .pieza__linea { --ml-trazo: 1.9px; }
+  :global(html.js:not(.reducido)) .pieza__linea:global(.barre) { --ml-stroke: url(#ml-barrido); --ml-o: 1; }
+
+  :global(html.js:not(.reducido)) .pieza__h1 {
+    position: absolute;
+    top: 16svh;
+    left: var(--izq);
+    width: calc((var(--interior) - var(--gutter)) / 2);
+    max-width: none;
+    margin: 0;
+  }
+  :global(html.js:not(.reducido)) .pieza__frase {
+    position: absolute;
+    top: 80svh;
+    left: var(--izq);
+    width: calc((var(--interior) - var(--gutter)) / 2);
+  }
+
+  /* Compacto: texto arriba, moto en (0,5·W; 0,80·H) a doble escala, frase bajo el suelo. */
+  :global(html.js.compacto:not(.reducido)) .pieza__moto {
+    left: calc(50vw - 56vw);
+    top: calc(var(--suelo-y) - 48vw);
+    width: 112vw;
+  }
+  :global(html.js.compacto:not(.reducido)) .pieza__linea { --ml-trazo: 3px; }
+  :global(html.js.compacto:not(.reducido)) .pieza__h1 { top: 12svh; width: var(--interior); }
+  :global(html.js.compacto:not(.reducido)) .pieza__frase { top: auto; bottom: 4svh; width: var(--interior); }
+  :global(html.js.compacto:not(.reducido)) .pieza__precio { font-size: var(--t-cuerpo); }
+</style>

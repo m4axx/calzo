@@ -1,13 +1,152 @@
 ---
-// STUB de WP0 — lo completa WP3 (§2.2).
+// 02 · Cómo se ata #amarre — el momento WOW (§2.2). Dueño: WP3.
+// Con coreografía, las fases de texto se superponen en la columna izquierda (arriba en
+// compacto) y su opacidad la escribe capitulos/amarre.ts; la moto la pinta el canvas o,
+// sin WebGL, el alzado y la planta de .amarre__svg (capitulos/moto-svg.ts).
+// Sin JS o con movimiento reducido es un <ol> de pasos con su fotograma (§7.3, §7.5).
+import MotoLinea from './svg/MotoLinea.astro';
+import MotoPlanta from './svg/MotoPlanta.astro';
 ---
-<section id="amarre" class="cap cap--fija" data-cap="amarre" aria-labelledby="amarre-h">
+<section id="amarre" class="cap cap--fija amarre" data-cap="amarre" aria-labelledby="amarre-h">
   <div class="cap__pista" style="--fija-d: 260; --fija-m: 200">
     <div class="cap__escenario">
-      <div class="fase" data-fase="titulo"><h2 id="amarre-h" class="h2">Así se ata una moto.</h2></div>
-      <div class="fase" data-fase="rueda"><h3 class="h3">La rueda delantera va calzada.</h3><p class="cuerpo">El calzo es la cuña que la inmoviliza; de ahí nuestro nombre.</p></div>
-      <div class="fase" data-fase="tija"><h3 class="h3">Delante, las cinchas van a la tija.</h3><p class="cuerpo">Es la pieza que une las barras de la horquilla bajo el manillar. Manillar, manetas y piñas quedan libres.</p></div>
-      <div class="fase" data-fase="horquilla"><h3 class="h3">La horquilla se comprime lo justo.</h3><p class="cuerpo">Al tensar, la suspensión baja sin quedar suelta ni llegar al tope.</p></div>
+      <div class="amarre__svg" aria-hidden="true">
+        <MotoLinea class="amarre__alzado" viewBox="0 -110 1400 750" etiqueta="" />
+        <MotoPlanta class="amarre__planta" />
+      </div>
+
+      <div class="fase amarre__titulo" data-fase="titulo"><h2 id="amarre-h" class="h2">Así se ata una moto.</h2></div>
+      <ol class="amarre__pasos">
+        <li class="fase amarre__paso" data-fase="rueda">
+          <figure class="amarre__quieto">
+            <img data-preset="quieto.calzo" alt="La moto con la rueda delantera en el calzo" width="1200" height="900" />
+            <MotoLinea class="amarre__estatica" viewBox="0 -110 1400 750" plataformaY={0.35} conCalzo etiqueta="La moto con la rueda delantera en el calzo" />
+          </figure>
+          <div class="amarre__texto">
+            <h3 class="h3">La rueda delantera va calzada.</h3>
+            <p class="cuerpo">El calzo es la cuña que la inmoviliza; de ahí nuestro nombre.</p>
+          </div>
+        </li>
+        <li class="fase amarre__paso" data-fase="tija">
+          <figure class="amarre__quieto">
+            <img data-preset="quieto.cinchas" alt="Las cinchas delanteras tensas desde las anillas hasta la tija" width="1200" height="900" />
+            <MotoLinea class="amarre__estatica" viewBox="0 -110 1400 750" plataformaY={0.35} conCalzo cinchas etiqueta="Las cinchas delanteras tensas desde las anillas hasta la tija" />
+          </figure>
+          <div class="amarre__texto">
+            <h3 class="h3">Delante, las cinchas van a la tija.</h3>
+            <p class="cuerpo">Es la pieza que une las barras de la horquilla bajo el manillar. Manillar, manetas y piñas quedan libres.</p>
+          </div>
+        </li>
+        <li class="fase amarre__paso" data-fase="horquilla">
+          <figure class="amarre__quieto">
+            <img data-preset="quieto.horquilla" alt="La horquilla comprimida bajo la tensión de las cinchas" width="1200" height="900" />
+            <MotoLinea class="amarre__estatica" viewBox="0 -110 1400 750" plataformaY={0.35} conCalzo cinchas horquilla={1} etiqueta="La horquilla comprimida bajo la tensión de las cinchas" />
+          </figure>
+          <div class="amarre__texto">
+            <h3 class="h3">La horquilla se comprime lo justo.</h3>
+            <p class="cuerpo">Al tensar, la suspensión baja sin quedar suelta ni llegar al tope.</p>
+          </div>
+        </li>
+        <li class="fase amarre__paso amarre__paso--final" data-fase="final">
+          <figure class="amarre__quieto">
+            <img data-preset="quieto.cenital" alt="La moto vista desde arriba, atada con cuatro cinchas en X" width="1200" height="900" />
+            <MotoPlanta class="amarre__estatica" />
+          </figure>
+          <div class="amarre__texto"><p class="amarre__listo">Lista para viajar.</p></div>
+        </li>
+      </ol>
     </div>
   </div>
 </section>
+
+<style>
+  /* ——— base (sin JS o con movimiento reducido): documento en flujo ——— */
+  .amarre .cap__escenario {
+    padding: var(--e-4) var(--margin);
+    max-width: var(--contenedor);
+    margin-inline: auto;
+  }
+  .amarre__svg { display: none; }
+  .amarre__titulo { margin-bottom: var(--e-3); max-width: 14ch; }
+  .amarre__pasos { display: grid; gap: var(--e-3); }
+  .amarre__paso { display: grid; gap: var(--e-1); align-items: center; }
+  .amarre__texto { display: grid; gap: 1rem; align-content: start; }
+  .amarre__listo { font-family: var(--f-display); font-size: var(--t-h3); font-weight: 480; line-height: 1; letter-spacing: -.01em; }
+  .amarre__quieto { margin: 0; position: relative; }
+  .amarre__quieto img { display: none; width: 100%; height: auto; opacity: 0; transition: opacity .2s var(--ease); }
+  .amarre__quieto img:global(.cargada) { opacity: 1; }
+  .amarre__quieto :global(.amarre__estatica) { width: 100%; height: auto; }
+  @media (min-width: 768px) {
+    .amarre__paso { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); }
+    .amarre__texto { grid-column: 1; grid-row: 1; }
+    .amarre__quieto { grid-column: 2; grid-row: 1; }
+  }
+  /* Con movimiento reducido y escena WebGL: fotogramas quietos en vez del dibujo. */
+  :global(html.js.reducido:not(.fuente-svg)) .amarre__quieto :global(.amarre__estatica) { display: none; }
+  :global(html.js.reducido:not(.fuente-svg)) .amarre__quieto img { display: block; }
+  :global(html.js.reducido:not(.fuente-svg)) .amarre__quieto { aspect-ratio: 4 / 3; }
+
+  /* ——— coreografía: escenario fijo ——— */
+  :global(html.js:not(.reducido)) .amarre .cap__escenario {
+    padding: 0;
+    max-width: none;
+    --izq: max(var(--margin), calc((100vw - var(--contenedor)) / 2 + var(--margin)));
+    --interior: calc(min(100vw, var(--contenedor)) - 2 * var(--margin));
+    --col: calc((var(--interior) - 11 * var(--gutter)) / 12);
+  }
+  :global(html.js:not(.reducido)) .amarre__pasos { display: block; }
+  :global(html.js:not(.reducido)) .amarre__quieto { display: none; }
+  :global(html.js:not(.reducido)) .amarre__paso { display: grid; }
+  :global(html.js:not(.reducido)) .amarre__titulo {
+    top: 18svh; left: var(--izq); margin: 0;
+    width: calc(5 * var(--col) + 4 * var(--gutter)); max-width: none;
+  }
+  :global(html.js:not(.reducido)) .amarre__paso {
+    top: 30svh; left: var(--izq);
+    width: calc(4 * var(--col) + 3 * var(--gutter));
+  }
+
+  /* Ruta SVG: el alzado a la derecha (1 m = 0,24·W, suelo a 0,80·H) y la planta centrada
+     en (0,5·W; 0,46·H) con la escala del plano cenital (1 m ≈ H/2,95, como la cámara de fov 30 a 5,5 m). */
+  :global(html.js:not(.reducido)) .amarre__svg {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s var(--ease);
+  }
+  :global(html.js.fuente-svg:not(.reducido)) .amarre__svg { opacity: 1; }
+  .amarre__svg :global(.amarre__alzado) {
+    position: absolute;
+    left: calc(66vw - 33.6vw);
+    top: calc(80svh - 710 * .048vw);
+    width: 67.2vw;
+    --ml-trazo: 2.2px;
+  }
+  .amarre__svg :global(.amarre__planta) {
+    position: absolute;
+    left: 50%;
+    top: 46svh;
+    width: calc(100svh * 3 / 2.95);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    --ml-trazo: 2px;
+  }
+
+  /* Compacto: texto arriba y moto debajo; la planta con el morro arriba. */
+  :global(html.js.compacto:not(.reducido)) .amarre__titulo { top: 12svh; width: var(--interior); }
+  :global(html.js.compacto:not(.reducido)) .amarre__paso { top: 12svh; width: var(--interior); }
+  :global(html.js.compacto:not(.reducido)) .amarre__svg :global(.amarre__alzado) {
+    left: calc(50vw - 56vw);
+    top: calc(84svh - 710 * .08vw);
+    width: 112vw;
+    --ml-trazo: 3.4px;
+  }
+  :global(html.js.compacto:not(.reducido)) .amarre__svg :global(.amarre__planta) {
+    top: 50svh;
+    width: auto;
+    height: min(86svh, 94vw * 1200 / 640);
+    --ml-trazo: 2.4px;
+  }
+</style>

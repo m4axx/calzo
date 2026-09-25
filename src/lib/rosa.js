@@ -14,13 +14,12 @@ export const KM_MAX = 750;
 const KM_FERRY = 260;           // Valencia → Palma por mar, solo para dibujar el tramo punteado
 const TAM = 13;                 // cuerpo de las etiquetas, en unidades del viewBox
 const TAM_FERRY = 11;
-const ALTO = TAM * 1.15;
 const HUECO = 14;               // de la punta del rayo a la etiqueta
 const PAD = 3;                  // aire mínimo entre cajas y entre caja y rayo
 const TOPE = 60;                // desplazamiento máximo respecto a la posición natural
 const GUIA = 10;                // a partir de aquí la etiqueta lleva línea guía
 const ITER = 200;
-const RADIO_PUNTO = 12;       // aire entre una etiqueta y el extremo de un rayo ajeno
+const RADIO_PUNTO = 18;       // aire entre una etiqueta y el extremo de un rayo ajeno
 
 // Avance por carácter de Big Shoulders Display a wght 520, en em, medido en
 // Chromium con la fuente real (canvas measureText a 100 px). Lo que no está en
@@ -84,7 +83,7 @@ function bordeCercano(p, c, w, h, m) {
  * que pisan un rayo ajeno se apartan en perpendicular a él. Cada etiqueta
  * queda a como mucho TOPE unidades de su posición natural y dentro del lienzo.
  */
-function relajar(etqs, segmentos, puntos) {
+function relajar(etqs, segmentos, puntos, tope) {
   for (let k = 0; k < ITER; k++) {
     let movido = false;
     for (let i = 0; i < etqs.length; i++) {
@@ -140,7 +139,7 @@ function relajar(etqs, segmentos, puntos) {
     for (const e of etqs) {
       const dx = e.c.x - e.nat.x, dy = e.c.y - e.nat.y;
       const d = Math.hypot(dx, dy);
-      if (d > TOPE) { e.c.x = e.nat.x + (dx / d) * TOPE; e.c.y = e.nat.y + (dy / d) * TOPE; }
+      if (d > tope) { e.c.x = e.nat.x + (dx / d) * tope; e.c.y = e.nat.y + (dy / d) * tope; }
       e.c.x = Math.min(Math.max(e.c.x, e.w / 2 + 2), 800 - e.w / 2 - 2);
       e.c.y = Math.min(Math.max(e.c.y, e.h / 2 + 2), 800 - e.h / 2 - 2);
     }
@@ -158,7 +157,9 @@ function relajar(etqs, segmentos, puntos) {
  *   iteraciones: number
  * }}
  */
-export function rosa() {
+export function rosa({ tam = TAM, tope = TOPE } = {}) {
+  const alto = tam * 1.15;
+  const tamFerry = (tam * TAM_FERRY) / TAM;
   const madrid = COORD.madrid;
   const valencia = DESTINOS.find((d) => d.id === 'valencia');
   const base = DESTINOS.map((d) => {
@@ -190,8 +191,8 @@ export function rosa() {
       const t = (thMar * Math.PI) / 180;
       const n = { x: -Math.cos(t), y: -Math.sin(t) };
       if (n.y > 0) { n.x = -n.x; n.y = -n.y; }
-      const w = anchoTexto('+ ferry', TAM_FERRY);
-      const h = TAM_FERRY * 1.15;
+      const w = anchoTexto('+ ferry', tamFerry);
+      const h = tamFerry * 1.15;
       const nat = { x: medio.x + n.x * (h / 2 + 6), y: medio.y + n.y * (h / 2 + 6) };
       const ef = { id: 'ferry', ancla: medio, nat: { ...nat }, c: { ...nat }, w, h };
       etqs.push(ef);
@@ -199,16 +200,16 @@ export function rosa() {
       fin = finMar;
       rumboEtq = thMar;
     }
-    const w = anchoTexto(d.nombre);
+    const w = anchoTexto(d.nombre, tam);
     const ancla = punto(rumboEtq, HUECO, fin);
-    const nat = centroNatural(ancla, rumboEtq, w, ALTO);
-    const e = { id: d.id, ancla: fin, nat: { ...nat }, c: { ...nat }, w, h: ALTO };
+    const nat = centroNatural(ancla, rumboEtq, w, alto);
+    const e = { id: d.id, ancla: fin, nat: { ...nat }, c: { ...nat }, w, h: alto };
     etqs.push(e);
     return { d, th, r, fin, rayoFin: b.fin, e, ferry };
   });
 
   const puntos = rayos.map((r) => ({ id: r.d.id, x: r.fin.x, y: r.fin.y }));
-  const iteraciones = relajar(etqs, segmentos, puntos);
+  const iteraciones = relajar(etqs, segmentos, puntos, tope);
 
   const etiquetaDe = (e) => {
     const desv = Math.hypot(e.c.x - e.nat.x, e.c.y - e.nat.y);

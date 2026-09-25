@@ -1,12 +1,498 @@
 ---
-// STUB de WP0 — lo completa WP3 (§5.5). Alzado de la moto, viewBox 0 0 1400 640,
-// svgX = 700 + 500·x, svgY = 600 − 500·y. Contrato de props:
-//   viewBox?: string  recorte (WP5 lo usa para las cuatro «fotos» del parte sin WebGL)
-//   plataformaY?: number  0 (enrasada) o 0.35 (arriba), estático
+// Alzado de la moto (§5.5, §7.4). Dueño: WP3.
+// viewBox 0 0 1400 640; svgX = 700 + 500·x, svgY = 600 − 500·y (metros del rig, §4.1).
+// Ejes en (337,5; 445) y (1062,5; 445); radio de rueda 155; suelo en y = 600.
+//
+// Contrato de props (lo usan WP3 y WP5; no se toca):
+//   viewBox?: string       recorte (WP5 lo usa para las cuatro «fotos» del parte sin WebGL)
+//   plataformaY?: number   0 (enrasada) o 0.35 (arriba), estático
 //   conCalzo?: boolean
 //   class?: string
-//   etiqueta?: string  aria-label; por defecto «Moto de perfil, dibujo técnico»
-interface Props { viewBox?: string; plataformaY?: number; conCalzo?: boolean; class?: string; etiqueta?: string }
-const { viewBox = '0 0 1400 640', class: cls, etiqueta = 'Moto de perfil, dibujo técnico' } = Astro.props;
+//   etiqueta?: string      aria-label; por defecto «Moto de perfil, dibujo técnico»
+// Extensiones opcionales de WP3 (no cambian lo anterior):
+//   cinchas?: boolean      cinchas en alzado, tensas y en naranja (fotogramas quietos)
+//   horquilla?: number     compresión 0..1 (28 mm a lo largo del eje con 1)
+//   barrido?: boolean      degradado de la intro del héroe (#ml-barrido, una sola instancia)
+//   definiciones?: boolean emite las piezas en <defs> (una sola vez por página, en CapPieza)
+//
+// El dibujo se define UNA vez y cada instancia lo reutiliza con <use>: la página lleva
+// seis alzados (más los cuatro recortes del parte) y repetir el trazo entero en cada
+// uno se comería el presupuesto de HTML (§7.6). Las piezas no fijan trazo ni opacidad:
+// los heredan de la instancia, así cada una puede tener su color y su foco.
+//
+// Estilo desde fuera, con custom properties en la instancia:
+//   color         color del trazo (por defecto --hueso; sobre papel, --tinta)
+//   --ml-fondo    relleno que tapa lo que queda detrás (por defecto --carbon; sobre papel, --papel)
+//   --ml-o        opacidad del trazo (.6, §7.4)
+//   --ml-trazo    grosor de la línea en unidades del viewBox
+import { ANCLAS, ANCLAS_PLATAFORMA } from '../../three/contrato-tipos.ts';
+
+interface Props {
+  viewBox?: string; plataformaY?: number; conCalzo?: boolean; class?: string; etiqueta?: string;
+  cinchas?: boolean; horquilla?: number; barrido?: boolean; definiciones?: boolean;
+}
+const {
+  viewBox = '0 0 1400 640', plataformaY = 0, conCalzo = false, class: cls,
+  etiqueta = 'Moto de perfil, dibujo técnico', cinchas = false, horquilla = 0,
+  barrido = false, definiciones = false,
+} = Astro.props;
+
+type V = [number, number];
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const sx = (x: number) => 700 + 500 * x;
+const sy = (y: number) => 600 - 500 * y;
+const S = (p: V): V => [sx(p[0]), sy(p[1])];
+const n2 = (p: V) => `${r1(p[0])} ${r1(p[1])}`;
+const suma = (a: V, b: V, k = 1): V => [a[0] + b[0] * k, a[1] + b[1] * k];
+const FONDO = 'fill:var(--ml-fondo,#0B0D0E)';
+
+const path = (d: string, estilo = '', extra = '') => `<path d="${d}"${estilo ? ` style="${estilo}"` : ''}${extra}/>`;
+/** Polilínea en unidades del viewBox. */
+const lin = (pts: V[], cerrado = false) => 'M' + pts.map(n2).join('L') + (cerrado ? 'Z' : '');
+/** Polilínea en metros. */
+const linM = (pts: V[], cerrado = false) => lin(pts.map(S), cerrado);
+const circ = (c: V, r: number, estilo = '', extra = '') =>
+  `<circle cx="${r1(c[0])}" cy="${r1(c[1])}" r="${r1(r)}"${estilo ? ` style="${estilo}"` : ''}${extra}/>`;
+/** Punto a distancia r y ángulo en grados, medido como en el rig (antihorario, y arriba). */
+const polar = (c: V, r: number, g: number): V => [c[0] + r * Math.cos(g * Math.PI / 180), c[1] - r * Math.sin(g * Math.PI / 180)];
+const circulo = (c: V, r: number) => `M${n2([c[0] + r, c[1]])}A${r1(r)} ${r1(r)} 0 1 0 ${n2([c[0] - r, c[1]])}A${r1(r)} ${r1(r)} 0 1 0 ${n2([c[0] + r, c[1]])}Z`;
+const anillo = (c: V, re: number, ri: number) => circulo(c, re) + circulo(c, ri);
+const arco = (c: V, r: number, g0: number, g1: number, n = 16): V[] =>
+  Array.from({ length: n + 1 }, (_, i) => polar(c, r, g0 + (g1 - g0) * i / n));
+const hexagono = (c: V, r: number, g = 0) => lin(Array.from({ length: 6 }, (_, i) => polar(c, r, g + i * 60)), true);
+
+/** Catmull-Rom uniforme → Bézier cúbicas (unidades del viewBox). */
+function suave(pts: V[], cerrado: boolean): string {
+  const n = pts.length;
+  const P = (i: number) => cerrado ? pts[(i + n) % n] : pts[Math.max(0, Math.min(n - 1, i))];
+  let d = `M${n2(pts[0])}`;
+  const tramos = cerrado ? n : n - 1;
+  for (let i = 0; i < tramos; i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+    const c1: V = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: V = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${n2(c1)} ${n2(c2)} ${n2(p2)}`;
+  }
+  return d + (cerrado ? 'Z' : '');
+}
+const suaveM = (pts: V[], cerrado: boolean) => suave(pts.map(S), cerrado);
+
+/** Tubo de lámina: contorno de dos líneas con la tapa cerrada (trazo ancho + trazo de fondo). */
+function tubo(d: string, D: number, cap: 'round' | 'square' | 'butt' = 'round'): string {
+  return path(d, `stroke-width:calc(${D}px + 2 * var(--ml-trazo,1.6px));stroke-linecap:${cap}`)
+    + path(d, `stroke:var(--ml-fondo,#0B0D0E);stroke-opacity:1;stroke-width:${D}px;stroke-linecap:${cap}`);
+}
+
+/** Cuadrilátero de una barra entre p0 y p1 (metros) con semianchos h0 y h1 (metros). */
+function barra(p0: V, p1: V, h0: number, h1: number, ext0 = 0, ext1 = 0): V[] {
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1], l = Math.hypot(dx, dy);
+  const u: V = [dx / l, dy / l], w: V = [-u[1], u[0]];
+  const a = suma(p0, u, -ext0), b = suma(p1, u, ext1);
+  return [suma(a, w, h0), suma(b, w, h1), suma(b, w, -h1), suma(a, w, -h0)];
+}
+const rect = (c: V, w: number, h: number, rx: number, giroPantalla = 0, estilo = FONDO, extra = '') =>
+  `<rect x="${r1(c[0] - w / 2)}" y="${r1(c[1] - h / 2)}" width="${r1(w)}" height="${r1(h)}" rx="${r1(rx)}"`
+  + (giroPantalla ? ` transform="rotate(${r1(giroPantalla)} ${r1(c[0])} ${r1(c[1])})"` : '')
+  + ` style="${estilo}"${extra}/>`;
+
+// ————— ruedas, discos, pinzas —————
+const EJE_DEL = S([ANCLAS.anc_contacto_del[0], 0.31]);
+const EJE_TRAS = S([ANCLAS.anc_contacto_tras[0], 0.31]);
+
+function rueda(c: V, giro: number): string {
+  let s = path(anillo(c, 155, 118), FONDO, ' fill-rule="evenodd"');           // neumático
+  s += circ(c, 150, '', ' stroke-dasharray="1.5 7" opacity=".55"');           // dibujo de la banda
+  s += circ(c, 139, '', ' opacity=".3"');                                       // hombro
+  s += path(anillo(c, 108, 99), FONDO, ' fill-rule="evenodd"');                // llanta: labio y canal (17″)
+  s += circ(c, 104, '', ' opacity=".4"');                                       // filo diamantado
+  for (let k = 0; k < 5; k++) {                                                 // 5 radios dobles
+    const g = giro + k * 72;
+    for (const sg of [-1, 1]) {
+      const h0 = polar(c, 25, g + sg * 6), h1 = polar(c, 99, g + sg * 12);
+      const dx = h1[0] - h0[0], dy = h1[1] - h0[1], l = Math.hypot(dx, dy);
+      const w: V = [-dy / l, dx / l];
+      s += path(lin([suma(h0, w, 2.8), suma(h1, w, 2), suma(h1, w, -2), suma(h0, w, -2.8)], true), FONDO);
+    }
+  }
+  s += circ(c, 27, FONDO) + circ(c, 17) + path(hexagono(c, 8, 30));             // buje y tuerca del eje
+  return s;
+}
+
+function disco(c: V, r: number, taladros: number, giro: number): string {
+  let s = path(anillo(c, r, r * 0.68), FONDO, ' fill-rule="evenodd"');
+  for (let i = 0; i < taladros; i++) s += circ(polar(c, r * 0.84, giro + i * 360 / taladros), 2.3);
+  for (let k = 0; k < 5; k++) s += circ(polar(c, r * 0.68, giro + 36 + k * 72), 3.4, FONDO); // flotantes
+  return s;
+}
+
+/** Pinza a las 8 en punto, a caballo del borde del disco. */
+function pinza(c: V, r: number): string {
+  const g = 210, p = polar(c, r - 6, g);
+  return rect(p, 45, 25, 6, -(g + 90)) + circ(polar(p, 9, g + 90), 3) + circ(polar(p, 9, g - 90), 3);
+}
+
+// ————— horquilla y tijas (eje con lanzamiento de 25°) —————
+const D_EJE: V = [-0.4226, 0.9063];
+const N_EJE: V = [0.9063, 0.4226];
+const eje = (t: number): V => suma([ANCLAS.anc_contacto_del[0], 0.31], D_EJE, t);
+const GIRO_EJE = -115; // rotación de pantalla para alinear un rect con el eje
+
+function tija(t0: number, esp: number, bulones: number): string {
+  const lam = (a: number, b: number, e: number) => {
+    const p0 = suma(eje(t0 - e / 2), N_EJE, a), p1 = suma(eje(t0 + e / 2), N_EJE, a);
+    const p2 = suma(eje(t0 + e / 2), N_EJE, -b), p3 = suma(eje(t0 - e / 2), N_EJE, -b);
+    return [p0, p1, p2, p3] as V[];
+  };
+  let s = path(linM(lam(0.03, 0.10, esp), true), FONDO);                 // placa
+  s += path(linM(lam(0.045, -0.012, esp + 0.022), true), FONDO);         // abarcón de la barra
+  s += path(linM(lam(-0.028, 0.066, esp + 0.012), true), FONDO);         // abarcón de la pipa
+  const bs: V[] = bulones === 2
+    ? [suma(eje(t0), N_EJE, 0.022), suma(eje(t0), N_EJE, -0.052)]
+    : [suma(eje(t0 - 0.008), N_EJE, 0.025), suma(eje(t0 + 0.008), N_EJE, 0.025), suma(eje(t0), N_EJE, -0.052)];
+  for (const b of bs) s += circ(S(b), 4.4, FONDO) + path(hexagono(S(b), 2.1, 0));   // tornillos Allen
+  return s;
+}
+
+// ————— piezas (metros) —————
+const PIVOTE = S([ANCLAS.pivote_suspension[0], ANCLAS.pivote_suspension[1]]);
+const cilindroEje: V = [Math.sin(20 * Math.PI / 180), Math.cos(20 * Math.PI / 180)];
+const cilindroPerp: V = [cilindroEje[1], -cilindroEje[0]];
+const enCilindro = (s: number, w: number): V => suma(suma([0.10, 0.50], cilindroEje, s), cilindroPerp, w);
+
+const carter: V[] = [[0.22, 0.30], [0.25, 0.42], [0.10, 0.50], [-0.12, 0.52], [-0.20, 0.40], [-0.15, 0.28], [0.05, 0.24]];
+function interior(pts: V[], d: number): V[] {
+  // Polígono convexo metido d hacia dentro (el bisel de 8 mm del cárter).
+  const n = pts.length;
+  let area = 0;
+  for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1]; }
+  const sg = area > 0 ? 1 : -1;
+  const lineas = pts.map((a, i) => {
+    const b = pts[(i + 1) % n]; const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
+    const w: V = [-dy / l * sg, dx / l * sg];
+    return [suma(a, w, d), suma(b, w, d)] as [V, V];
+  });
+  return lineas.map((l1, i) => {
+    const l0 = lineas[(i - 1 + n) % n];
+    const [p, p2] = l0, [q, q2] = l1;
+    const r: V = [p2[0] - p[0], p2[1] - p[1]], s: V = [q2[0] - q[0], q2[1] - q[1]];
+    const den = r[0] * s[1] - r[1] * s[0];
+    const t = ((q[0] - p[0]) * s[1] - (q[1] - p[1]) * s[0]) / den;
+    return suma(p, r, t);
+  });
+}
+
+function piezas(): Record<string, string> {
+  const P: Record<string, string> = {};
+
+  // — Plataforma: chapa, carril en U y costado anodizado (el recorte a ras de suelo lo pone la instancia) —
+  P.plataforma = path(lin([[50, 603], [53, 600], [1347, 600], [1350, 603], [1350, 800], [50, 800]], true), FONDO)
+    + path('M50 603H1350M50 618H1350') + path('M50 610.5H1350', '', ' opacity=".45"')
+    + path('M375 618V800M700 618V800M1025 618V800', '', ' opacity=".3"');
+  P.anillas = [ANCLAS_PLATAFORMA.anc_anilla_del_I, ANCLAS_PLATAFORMA.anc_anilla_tras_I].map((a) => {
+    const x = sx(a[0]);
+    return path(`M${x - 14} 600A14 14 0 0 1 ${x + 14} 600M${x - 10.5} 600A10.5 10.5 0 0 1 ${x + 10.5} 600`)
+      + rect([x, 599], 34, 3, 1);
+  }).join('');
+  // Suelo fuera de la plataforma y la junta del elevador (12 mm por lado).
+  P.suelo = path(`M0 600H${r1(sx(-1.312))}V606M${r1(sx(1.312))} 606V600H1400`);
+
+  // — Calzo: cuna de aluminio con taco de goma, con el contacto delantero como origen —
+  {
+    const x0 = ANCLAS.anc_calzo[0];
+    const c = (x: number, y: number): V => [x0 + x, y];
+    const cara = arco([0, 0.31], 0.318, -12, -66, 10).map(([x, y]) => c(x, y));
+    const goma = arco([0, 0.31], 0.311, -12, -66, 10).map(([x, y]) => c(x, y));
+    const perfil: V[] = [c(-0.14, 0), c(0.30, 0), c(0.34, 0.06), c(0.356, 0.16), c(0.35, 0.25), c(0.304, 0.25),
+      ...cara, c(-0.10, 0.02), c(-0.12, 0.045), c(-0.14, 0.045)];
+    P.calzo = path(linM(perfil, true), FONDO) + path(linM(goma), '', ' opacity=".55"')
+      + path(linM([c(-0.10, 0.012), c(0.29, 0.012)]), '', ' opacity=".35"')
+      + circ(S(c(-0.07, 0.022)), 3) + circ(S(c(0.24, 0.022)), 3);
+  }
+
+  // — Tren trasero (fijo) —
+  P.trasLejos = disco(EJE_TRAS, 60, 12, 8) + pinza(EJE_TRAS, 60);
+  P.ruedaTras = rueda(EJE_TRAS, 18);
+  {
+    // Cadena del piñón (bajo la tapa del motor) a la corona, por sus tangentes exteriores.
+    const c1 = S([-0.10, 0.34]), c2 = EJE_TRAS, r1c = 24.5, r2c = 52.5;
+    const dx = c1[0] - c2[0], dy = c1[1] - c2[1], d = Math.hypot(dx, dy);
+    const phi = Math.atan2(dy, dx), beta = Math.acos((r2c - r1c) / d);
+    const en = (c: V, r: number, a: number): V => [c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)];
+    const pts: V[] = [];
+    for (let i = 0; i <= 10; i++) pts.push(en(c1, r1c, phi + beta - (2 * beta) * i / 10));
+    for (let i = 0; i <= 24; i++) pts.push(en(c2, r2c, phi - beta - (2 * Math.PI - 2 * beta) * i / 24));
+    const lazo = lin(pts, true);
+    let corona = '';
+    const dientes = 38;
+    const cp: V[] = [];
+    for (let i = 0; i < dientes * 2; i++) cp.push(polar(c2, i % 2 ? 46.5 : 52, i * 180 / dientes));
+    corona += path(lin(cp, true), FONDO);
+    for (let k = 0; k < 5; k++) corona += circ(polar(c2, 31, 18 + k * 72), 7.5);
+    corona += circ(c2, 20);
+    P.cadena = tubo(lazo, 7) + path(lazo, '', ' stroke-dasharray="2.2 2.6" opacity=".7"') + corona;
+  }
+  {
+    const q = barra([-0.20, 0.47], [-0.725, 0.31], 0.028, 0.022, 0.03, 0.055);
+    P.basculante = path(linM(q, true), FONDO)
+      + path(linM(barra([-0.20, 0.47], [-0.725, 0.31], 0.011, 0.009, -0.03, -0.01).slice(0, 2)), '', ' opacity=".45"')
+      + circ(S([-0.20, 0.47]), 15, FONDO) + circ(S([-0.20, 0.47]), 6) + path(hexagono(S([-0.20, 0.47]), 3.2))
+      + rect(S([-0.745, 0.307]), 34, 17, 3, 17) + path(hexagono(EJE_TRAS, 9, 0));
+  }
+
+  // — Chasis: largueros rectos con codos, cuna, subchasis (tubo Ø 25 mm) —
+  const D_CH = 12.5;
+  P.chasisBajo = tubo(linM([[0.20, 0.36], [-0.05, 0.30], [-0.20, 0.40]]), D_CH);
+  P.chasisAlto = tubo(linM([[0.46, 0.80], [0.20, 0.36]]), D_CH)
+    + tubo(linM([[0.47, 0.87], [0.25, 0.80], [-0.05, 0.68], [-0.18, 0.55], [-0.20, 0.47]]), D_CH)
+    + tubo(linM([[-0.12, 0.74], [-0.80, 0.80]]), D_CH)
+    + tubo(linM([[-0.12, 0.74], [-0.07, 0.66]]), D_CH)
+    + tubo(linM([[-0.20, 0.50], [-0.55, 0.76]]), D_CH)
+    + [[-0.18, 0.55], [-0.55, 0.76], [-0.07, 0.66], [-0.12, 0.74]].map((p) => circ(S(p as V), 8.5, '', ' opacity=".7"')).join('')
+    + path(suaveM([[-0.155, 0.525], [-0.245, 0.515], [-0.26, 0.40], [-0.235, 0.345], [-0.16, 0.35], [-0.145, 0.44]], true), FONDO)
+    + circ(S([-0.20, 0.40]), 5);
+
+  // — Motor: cárter con bisel, tapa lateral, cilindro inclinado 20° con 11 aletas, culata —
+  {
+    let s = path(linM(carter, true), FONDO) + path(linM(interior(carter, 0.008), true), '', ' opacity=".45"');
+    const tapa = S([-0.02, 0.385]);
+    s += circ(tapa, 40, FONDO) + circ(tapa, 33, '', ' opacity=".55"');
+    for (let k = 0; k < 6; k++) s += circ(polar(tapa, 36.5, 15 + k * 60), 1.9);
+    s += path(linM([enCilindro(0, 0.07), enCilindro(0, -0.07)]));                   // brida de la base
+    s += path(linM([enCilindro(0, 0.045), enCilindro(0.19, 0.045)]) + linM([enCilindro(0, -0.045), enCilindro(0.19, -0.045)]));
+    for (let i = 0; i < 11; i++) {
+      const e = 0.022 + i * 0.016, k = 1 - i * 0.016;
+      s += path(linM([enCilindro(e, 0.065 * k), enCilindro(e, -0.065 * k)]));
+    }
+    const culata = [enCilindro(0.19, 0.066), enCilindro(0.245, 0.062), enCilindro(0.245, -0.062), enCilindro(0.19, -0.066)];
+    s += path(linM(culata, true), FONDO);
+    s += path(linM([enCilindro(0.245, 0.048), enCilindro(0.275, 0.042), enCilindro(0.275, -0.042), enCilindro(0.245, -0.048)], true), FONDO);
+    s += circ(S(enCilindro(0.26, 0.022)), 2.4) + circ(S(enCilindro(0.26, -0.022)), 2.4);
+    s += path(linM([enCilindro(0.215, -0.066), enCilindro(0.23, -0.10)]), 'stroke-width:calc(4px + var(--ml-trazo,1.6px))'); // bujía
+    P.motor = s;
+  }
+  // Escape: silencioso cónico al otro lado (queda detrás de la rueda) y colector del lado cercano.
+  P.silencioso = tubo(suaveM([[-0.20, 0.20], [-0.28, 0.24], [-0.35, 0.30]], false), 19)
+    + path(linM(barra([-0.35, 0.30], [-0.78, 0.40], 0.05, 0.0425, 0.02, 0), true), FONDO)
+    + path(suaveM([[-0.775, 0.44], [-0.80, 0.43], [-0.805, 0.40], [-0.80, 0.37], [-0.775, 0.358]], false), FONDO)
+    + [0.25, 0.75].map((f) => path(linM(barra([-0.35 - 0.43 * f, 0.30 + 0.1 * f], [-0.35 - 0.43 * f - 0.001, 0.30 + 0.1 * f + 0.0002], 0.05 - 0.0075 * f, 0.05 - 0.0075 * f).slice(1, 3)), '', ' opacity=".5"')).join('');
+  P.colector = tubo(suaveM([[0.22, 0.62], [0.30, 0.40], [0.15, 0.22], [-0.20, 0.20]], false), 19)
+    + rect(S([0.225, 0.628]), 30, 12, 2, -20);
+
+  // Amortiguadores (doble; el cercano tapa al lejano): cuerpo, vástago, muelle de 9 espiras, ojos.
+  {
+    const b0: V = [-0.62, 0.36], b1: V = [-0.50, 0.78];
+    const L = Math.hypot(b1[0] - b0[0], b1[1] - b0[1]);
+    const a: V = [(b1[0] - b0[0]) / L, (b1[1] - b0[1]) / L], w: V = [a[1], -a[0]];
+    const en = (s: number, k: number): V => suma(suma(b0, a, s), w, k);
+    let s = path(linM([en(0.03, 0.021), en(0.20, 0.021), en(0.20, -0.021), en(0.03, -0.021)], true), FONDO);
+    s += path(linM([en(0.20, 0.008), en(0.40, 0.008)]) + linM([en(0.20, -0.008), en(0.40, -0.008)]));
+    s += path(linM([en(0.065, 0.036), en(0.065, -0.036)]) + linM([en(0.375, 0.036), en(0.375, -0.036)]), 'stroke-width:calc(3px + var(--ml-trazo,1.6px))');
+    const paso = 0.30 / 9;
+    for (let i = 0; i < 9; i++) {
+      const e = 0.07 + i * paso;
+      s += path(linM([en(e, -0.03), en(e + paso / 2, 0.03)]));
+      s += path(linM([en(e + paso / 2, 0.03), en(e + paso, -0.03)]), '', ' opacity=".35"');
+    }
+    s += path(linM([en(0.38, 0.025), en(0.42, 0.022), en(0.42, -0.022), en(0.38, -0.025)], true), FONDO);
+    s += circ(S(b0), 9, FONDO) + circ(S(b0), 3.5) + circ(S(b1), 9, FONDO) + circ(S(b1), 3.5);
+    P.amortiguador = s;
+  }
+  P.estribera = path(linM([[-0.17, 0.40], [-0.215, 0.40], [-0.20, 0.35], [-0.165, 0.35]], true), FONDO)
+    + rect(S([-0.18, 0.36]), 19, 14, 4) + path(linM([[-0.186, 0.353], [-0.186, 0.367]]) + linM([[-0.174, 0.353], [-0.174, 0.367]]), '', ' opacity=".6"');
+
+  // — Asiento, colín y piloto (lente ahumada, sin emisión) —
+  P.asiento = path(suaveM([[-0.125, 0.832], [-0.11, 0.872], [-0.17, 0.905], [-0.32, 0.913], [-0.48, 0.92], [-0.60, 0.925],
+    [-0.625, 0.905], [-0.62, 0.862], [-0.40, 0.848], [-0.20, 0.838]], true), FONDO)
+    + path(suaveM([[-0.135, 0.885], [-0.32, 0.9], [-0.48, 0.907], [-0.595, 0.912]], false), '', ' stroke-dasharray="3 3" opacity=".6"')
+    + path(suaveM([[-0.13, 0.846], [-0.40, 0.858], [-0.61, 0.868]], false), '', ' opacity=".4"')
+    + path(linM([[-0.60, 0.925], [-0.70, 0.912], [-0.80, 0.886], [-0.815, 0.873], [-0.79, 0.858], [-0.70, 0.853], [-0.615, 0.855]], true), FONDO)
+    + path(linM([[-0.80, 0.886], [-0.832, 0.879], [-0.832, 0.864], [-0.806, 0.861]], true), FONDO)
+    + path(linM([[-0.812, 0.881], [-0.826, 0.872], [-0.812, 0.866]]), '', ' opacity=".5"');
+
+  // — Depósito: gota de la tabla de §4.2 (perfil techo/suelo), tapón, rodillera —
+  P.deposito = path(suaveM([[0.43, 0.88], [0.40, 0.915], [0.33, 0.955], [0.25, 0.985], [0.15, 1.0], [0.05, 0.995], [-0.02, 0.975],
+    [-0.08, 0.955], [-0.13, 0.93], [-0.152, 0.865], [-0.13, 0.80], [-0.08, 0.79], [-0.02, 0.785], [0.05, 0.78], [0.15, 0.78],
+    [0.25, 0.79], [0.33, 0.81], [0.40, 0.85]], true), FONDO)
+    + path(suaveM([[0.415, 0.89], [0.33, 0.926], [0.22, 0.952], [0.10, 0.96], [0.02, 0.952]], false), '', ' opacity=".45"')
+    + path(suaveM([[0.03, 0.93], [-0.07, 0.927], [-0.105, 0.88], [-0.075, 0.818], [0.025, 0.816], [0.06, 0.87]], true), '', ' opacity=".55"')
+    + [0.845, 0.872, 0.899].map((y) => path(linM([[-0.07, y], [0.03, y]]), '', ' opacity=".3"')).join('')
+    + path(linM([[0.15, 0.998], [0.155, 1.012], [0.205, 1.012], [0.21, 0.998]]), FONDO);
+
+  // — Tren delantero (fijo): disco lejano, rueda, disco cercano con su pinza, guardabarros, botellas —
+  P.delLejos = disco(EJE_DEL, 80, 18, 5);
+  P.ruedaDel = rueda(EJE_DEL, 0);
+  P.discoDel = disco(EJE_DEL, 80, 18, 5) + path(linM([[0.71, 0.33], [0.64, 0.28], [0.625, 0.25]]), 'stroke-width:calc(8px + var(--ml-trazo,1.6px))')
+    + pinza(EJE_DEL, 80);
+  {
+    const c: V = [ANCLAS.anc_contacto_del[0], 0.31];
+    const ext = arco(c, 0.352, 28, 150, 18), int = arco(c, 0.327, 150, 28, 18);
+    P.guardabarros = path(linM([...ext, ...int], true), FONDO) + path(linM(arco(c, 0.34, 32, 146, 18)), '', ' opacity=".35"');
+  }
+  P.botellas = tubo(linM([eje(0.035), eje(0.36)]), 28, 'square')
+    + path(linM([suma(eje(0.34), N_EJE, 0.03), suma(eje(0.34), N_EJE, -0.03)]), '', ' opacity=".6"')
+    + rect(S(eje(0.02)), 38, 32, 7, GIRO_EJE) + circ(S(suma(eje(0.035), N_EJE, -0.012)), 3) + circ(S(suma(eje(0.005), N_EJE, -0.012)), 3);
+  P.barras = tubo(linM([eje(0.30), eje(0.70)]), 21.5, 'butt')
+    + path(linM([suma(eje(0.70), N_EJE, 0.0125), suma(eje(0.712), N_EJE, 0.009), suma(eje(0.712), N_EJE, -0.009), suma(eje(0.70), N_EJE, -0.0125)]), FONDO);
+
+  // — Pipa, tijas (máximo detalle: primer plano de la pausa), faro, manillar y mandos —
+  P.pipa = tubo(linM([suma(eje(0.515), N_EJE, -0.04), suma(eje(0.645), N_EJE, -0.04)]), 25, 'square');
+  P.tijas = tija(0.50, 0.03, 3) + tija(0.66, 0.025, 2)
+    + path(linM([suma(eje(0.673), N_EJE, -0.052), suma(eje(0.69), N_EJE, -0.048), suma(eje(0.69), N_EJE, -0.028), suma(eje(0.673), N_EJE, -0.024)], true), FONDO)
+    + path(hexagono(S(suma(eje(0.682), N_EJE, -0.038)), 4.5, 90));
+  P.faro = path(linM([[0.47, 0.862], [0.55, 0.888], [0.555, 0.872], [0.475, 0.848]], true), FONDO)
+    + path(suaveM([[0.655, 0.97], [0.585, 0.966], [0.535, 0.93], [0.528, 0.88], [0.535, 0.83], [0.585, 0.794], [0.655, 0.79]], false) + 'Z', FONDO)
+    + path(linM([[0.655, 0.97], [0.668, 0.968], [0.668, 0.792], [0.655, 0.79]], true), FONDO)
+    + path(suaveM([[0.668, 0.962], [0.684, 0.92], [0.688, 0.88], [0.684, 0.84], [0.668, 0.798]], false), '', ' opacity=".6"')
+    + circ(S([0.552, 0.88]), 5.5, FONDO) + circ(S([0.552, 0.88]), 2);
+  P.mandos = rect(S([0.443, 0.93]), 15, 24, 2, GIRO_EJE + 90)
+    + tubo(linM([[0.44, 0.955], [0.43, 0.97], [0.40, 0.99]]), 11)
+    + rect(S([0.415, 0.99]), 25, 20, 5)
+    + path(suaveM([[0.425, 0.994], [0.465, 0.99], [0.49, 0.972]], false), 'stroke-width:calc(4px + var(--ml-trazo,1.6px))')
+    + circ(S([0.49, 0.972]), 3.2, FONDO)
+    + circ(S([0.40, 0.99]), 8.5, FONDO) + circ(S([0.40, 0.99]), 4.2)
+    + path(linM([[0.455, 0.93], [0.465, 1.0]]), 'stroke-width:calc(5px + var(--ml-trazo,1.6px))')
+    + rect(S([0.46, 1.02]), 56, 25, 9, 25) + path(linM([polar(S([0.46, 1.02]), 20, 115), polar(S([0.46, 1.02]), 20, -65)]), '', ' opacity=".5"');
+  // Latiguillo (bomba → pinza) y cable de embrague (maneta → motor), con su catenaria.
+  P.cables = path(suaveM([[0.435, 0.975], [0.505, 0.90], [0.53, 0.70], [0.585, 0.52], [0.625, 0.33], [0.625, 0.265]], false), '', ' opacity=".8"')
+    + path(suaveM([[0.425, 0.985], [0.37, 0.93], [0.36, 0.80], [0.29, 0.66], [0.10, 0.57], [0.01, 0.45]], false), '', ' opacity=".8"');
+  return P;
+}
+
+// Orden de dibujo de atrás adelante (visto desde +z) y grupo de movimiento de cada pieza:
+// 'susp' gira con la horquilla alrededor del eje trasero; 'fijo' no se mueve.
+const ORDEN: Array<{ id: string; grupo: 'susp' | 'fijo'; pieza: string }> = [
+  { id: 'trasLejos', grupo: 'fijo', pieza: 'resto' },
+  { id: 'silencioso', grupo: 'susp', pieza: 'resto' },
+  { id: 'ruedaTras', grupo: 'fijo', pieza: 'resto' },
+  { id: 'cadena', grupo: 'fijo', pieza: 'resto' },
+  { id: 'chasisBajo', grupo: 'susp', pieza: 'resto' },
+  { id: 'motor', grupo: 'susp', pieza: 'motor' },
+  { id: 'colector', grupo: 'susp', pieza: 'resto' },
+  { id: 'chasisAlto', grupo: 'susp', pieza: 'resto' },
+  { id: 'basculante', grupo: 'fijo', pieza: 'resto' },
+  { id: 'amortiguador', grupo: 'susp', pieza: 'resto' },
+  { id: 'estribera', grupo: 'susp', pieza: 'resto' },
+  { id: 'asiento', grupo: 'susp', pieza: 'resto' },
+  { id: 'deposito', grupo: 'susp', pieza: 'deposito' },
+  { id: 'delLejos', grupo: 'fijo', pieza: 'rueda_del' },
+  { id: 'ruedaDel', grupo: 'fijo', pieza: 'rueda_del' },
+  { id: 'discoDel', grupo: 'fijo', pieza: 'rueda_del' },
+  { id: 'guardabarros', grupo: 'fijo', pieza: 'resto' },
+  { id: 'faro', grupo: 'susp', pieza: 'resto' },
+  { id: 'barras', grupo: 'susp', pieza: 'horquilla' },
+  { id: 'botellas', grupo: 'fijo', pieza: 'horquilla' },
+  { id: 'pipa', grupo: 'susp', pieza: 'resto' },
+  { id: 'tijas', grupo: 'susp', pieza: 'tija' },
+  { id: 'mandos', grupo: 'susp', pieza: 'mandos' },
+  { id: 'cables', grupo: 'susp', pieza: 'resto' },
+];
+const P = definiciones ? piezas() : null;
+
+// ————— estado estático de la instancia (sin JS se ve tal cual) —————
+const θ = horquilla * 0.028 * 0.9063 / 1.45 * 180 / Math.PI;       // grados, rotación de pantalla (horaria)
+const giroSusp = θ ? `rotate(${r1(θ * 1000) / 1000} ${PIVOTE[0]} ${PIVOTE[1]})` : undefined;
+const mover = plataformaY ? `translate(0 ${r1(-500 * plataformaY)})` : undefined;
+
+// Cinchas en alzado: la delantera y la trasera del lado cercano (+z). Misma curva que la cinta 3D
+// (§4.4): flecha 0,16·(1 − T)^1,5 m hacia abajo; aquí, estáticas y tensas (T = 1).
+function giraSusp(p: V, grados: number): V {
+  const a = grados * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  return [PIVOTE[0] + (p[0] - PIVOTE[0]) * c - (p[1] - PIVOTE[1]) * s, PIVOTE[1] + (p[0] - PIVOTE[0]) * s + (p[1] - PIVOTE[1]) * c];
+}
+const CINTAS = [
+  { i: 0, a: S([ANCLAS_PLATAFORMA.anc_anilla_del_I[0], ANCLAS_PLATAFORMA.anc_anilla_del_I[1]]), b: S([ANCLAS.anc_cincha_tija_I[0], ANCLAS.anc_cincha_tija_I[1]]) },
+  { i: 2, a: S([ANCLAS_PLATAFORMA.anc_anilla_tras_I[0], ANCLAS_PLATAFORMA.anc_anilla_tras_I[1]]), b: S([ANCLAS.anc_cincha_tras_I[0], ANCLAS.anc_cincha_tras_I[1]]) },
+].map(({ i, a, b }) => {
+  const bb = giraSusp(b, θ);
+  const ang = Math.atan2(bb[1] - a[1], bb[0] - a[0]);
+  const u: V = [Math.cos(ang), Math.sin(ang)];
+  const ini = suma(a, u, 42);
+  return {
+    i, a, b: bb, ang: ang * 180 / Math.PI,
+    d: `M${n2(ini)}Q${n2([(ini[0] + bb[0]) / 2, (ini[1] + bb[1]) / 2])} ${n2(bb)}`,
+  };
+});
+const ids = ORDEN.map((o) => o.id);
 ---
-<svg class:list={['moto-linea', cls]} viewBox={viewBox} role="img" aria-label={etiqueta}></svg>
+{definiciones && P ? (
+  <svg class="moto-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="ml-sobre-suelo" clipPathUnits="userSpaceOnUse"><rect x="-200" y="-400" width="1800" height="1000.5" /></clipPath>
+      {['plataforma', 'anillas', 'suelo', 'calzo', ...ids].map((id) => <g id={`ml-${id}`} set:html={P[id]} />)}
+      <g id="ml-carraca">
+        <path d="M0 0L6 0" />
+        <rect x="6" y="-9" width="34" height="18" rx="3" style="fill:var(--ml-fondo,#0B0D0E)" />
+        <path d="M11 -3H35M11 3H35" opacity=".45" />
+      </g>
+    </defs>
+  </svg>
+) : (
+  <svg class:list={['moto-linea', cls, { 'ml-atada': cinchas }]} viewBox={viewBox} role="img" aria-label={etiqueta} preserveAspectRatio="xMidYMid meet">
+    {barrido && (
+      <defs>
+        <linearGradient id="ml-barrido" gradientUnits="userSpaceOnUse" x1="-110" y1="0" x2="110" y2="0" gradientTransform="translate(-140 0)">
+          <stop offset="0" stop-color="currentColor" stop-opacity=".6" />
+          <stop offset=".3" stop-color="currentColor" stop-opacity=".6" />
+          <stop offset=".5" stop-color="currentColor" stop-opacity="1" />
+          <stop offset=".72" stop-color="currentColor" stop-opacity=".1" />
+          <stop offset="1" stop-color="currentColor" stop-opacity=".1" />
+          <animateTransform attributeName="gradientTransform" type="translate" from="-140 0" to="1540 0" dur="1.6s"
+            begin="indefinite" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.62 0 0.12 1" />
+        </linearGradient>
+      </defs>
+    )}
+    <g class="ml-dibujo">
+      <g clip-path="url(#ml-sobre-suelo)">
+        <g class="ml-mov" transform={mover}><use href="#ml-plataforma" data-pieza="resto" /></g>
+      </g>
+      <use href="#ml-suelo" data-pieza="resto" />
+      <g class="ml-mov" transform={mover}>
+        <use href="#ml-anillas" data-pieza="resto" />
+        <g class="ml-calzo" style={conCalzo ? undefined : 'opacity:0'}><use href="#ml-calzo" data-pieza="calzo" /></g>
+        {ORDEN.map((o) => (
+          <use href={`#ml-${o.id}`} data-pieza={o.pieza} class={o.grupo === 'susp' ? 'ml-susp' : undefined}
+            transform={o.grupo === 'susp' ? giroSusp : undefined} />
+        ))}
+        <g class="ml-cinchas" style={cinchas ? undefined : 'opacity:0'}>
+          {CINTAS.map((c) => (
+            <g class="ml-cincha" data-i={c.i}>
+              <path class="ml-cinta" d={c.d} pathLength="1" />
+              <circle class="ml-lazo" cx={r1(c.b[0])} cy={r1(c.b[1])} r="9" />
+              <g class="ml-carraca" transform={`translate(${r1(c.a[0])} ${r1(c.a[1])}) rotate(${r1(c.ang)})`}>
+                <use href="#ml-carraca" />
+                <path class="ml-palanca" d="M9 -9L44 -15" transform={cinchas ? 'rotate(-18 9 -9)' : undefined} />
+              </g>
+            </g>
+          ))}
+        </g>
+      </g>
+    </g>
+  </svg>
+)}
+
+<style>
+  .moto-linea {
+    color: var(--hueso);
+    overflow: visible;
+    fill: none;
+    stroke: var(--ml-stroke, currentColor);
+    stroke-opacity: var(--ml-o, .6);
+    stroke-width: var(--ml-trazo, 1.6px);
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .moto-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+  /* Las cintas llevan su propio color (de --cincha-floja a --cincha según la tensión). */
+  .moto-linea :global(.ml-cinta) {
+    stroke: var(--cincha);
+    stroke-opacity: 1;
+    stroke-width: 12px;
+    stroke-linecap: butt;
+    stroke-dasharray: 0 2;
+  }
+  .moto-linea.ml-atada :global(.ml-cinta) { stroke-dasharray: 1 2; }
+  .moto-linea :global(.ml-lazo) { stroke: var(--cincha); stroke-opacity: 1; stroke-width: 5px; opacity: 0; }
+  .moto-linea.ml-atada :global(.ml-lazo) { opacity: 1; }
+  .moto-linea :global(.ml-carraca) { stroke: var(--aluminio); stroke-opacity: .9; }
+  .moto-linea :global(.ml-palanca) { stroke-width: 4px; }
+</style>

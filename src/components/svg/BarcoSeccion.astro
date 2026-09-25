@@ -128,6 +128,8 @@ const puntales: Array<[number, number]> = [[132, bajoI(132)], [153, bajoI(153)],
     font-size: 11px;
     font-variant-numeric: tabular-nums;
   }
+  /* la mini-lámina se imprime a ~0,6: las cotas suben de cuerpo para leerse */
+  .barco-seccion--mini .l-cifra { font-size: 19px; }
   .l-rotulo {
     fill: var(--l-cota);
     font-family: var(--f-display);
@@ -136,6 +138,10 @@ const puntales: Array<[number, number]> = [[132, bajoI(132)], [153, bajoI(153)],
     letter-spacing: .08em;
   }
   .l-guia { stroke: var(--l-cota); stroke-width: 1px; }
+  @media (max-width: 600px) {
+    .barco-seccion:not(.barco-seccion--mini) .l-rotulo { font-size: 12px; letter-spacing: .06em; }
+    .barco-seccion:not(.barco-seccion--mini) .l-cifra { font-size: 14px; }
+  }
 
   /* mini + manga > 2,55 m (WP4 pone html.manga-ancha): el casco se sale del límite */
   .barco__casco { transform-box: view-box; transform-origin: 200px 0; }
