@@ -4,7 +4,7 @@
 import { estado, emit, type Fuente } from './estado.ts';
 import { onFrame, registrarTeletransporte } from './motion.ts';
 import type { EscenaAPI, ControlEscena } from '../three/escena.ts';
-import type { Tier } from '../three/contrato-tipos.ts';
+import type { Tier, PresetId } from '../three/contrato-tipos.ts';
 
 export type Paso = 'fuentes' | 'three' | 'moto' | 'texturas' | 'shaders' | 'benchmark';
 
@@ -23,8 +23,59 @@ let listoEmitido = false;
 let tierEmitido = false;
 let quitarFrontera: (() => void) | null = null;
 
+// Espera a que haya escena (tras una reconstrucción por pérdida de contexto).
+let esperandoEscena: Array<() => void> = [];
+function escenaDisponible(): Promise<ControlEscena> {
+  if (ctrl) return Promise.resolve(ctrl);
+  return new Promise((r) => { esperandoEscena.push(() => r(ctrl!)); });
+}
+function avisarEscena(): void {
+  const l = esperandoEscena;
+  esperandoEscena = [];
+  for (const f of l) f();
+}
+
+/**
+ * API estable: sobrevive a la reconstrucción de la escena tras perder el
+ * contexto. Una captura pedida a una escena que se pierde se vuelve a pedir a
+ * la siguiente (el mismo preset devuelve siempre la misma promesa).
+ */
+const capturasPedidas = new Map<PresetId, Promise<string>>();
+type OpcionesCaptura = Parameters<EscenaAPI['capturar']>[1];
+function capturarEstable(preset: PresetId, o: OpcionesCaptura, intento = 0): Promise<string> {
+  return escenaDisponible().then((c) => c.api.capturar(preset, o).catch((err: unknown) => {
+    if (intento < 2 && c !== ctrl) return capturarEstable(preset, o, intento + 1);   // se perdió el contexto
+    throw err;
+  }));
+}
+const apiEstable: EscenaAPI = {
+  get tier() { return ctrl?.api.tier ?? estado.modo.tier; },
+  renderUnaVez: () => { ctrl?.api.renderUnaVez(); },
+  pausar: () => { ctrl?.api.pausar(); },
+  reanudar: () => { ctrl?.api.reanudar(); },
+  cinchasCenitales: (w, h) => {
+    if (!ctrl) throw new Error('[calzo] cinchasCenitales sin escena');
+    return ctrl.api.cinchasCenitales(w, h);
+  },
+  capturar(preset, o) {
+    let p = capturasPedidas.get(preset);
+    if (!p) {
+      p = capturarEstable(preset, o);
+      capturasPedidas.set(preset, p);
+      p.catch(() => capturasPedidas.delete(preset));
+    }
+    return p;
+  },
+  info: () => {
+    if (!ctrl) throw new Error('[calzo] info sin escena');
+    return ctrl.api.info();
+  },
+  pixel: (x, y) => (ctrl ? ctrl.api.pixel(x, y) : Promise.reject(new Error('[calzo] pixel sin escena'))),
+  destruir: () => { ctrl?.api.destruir(); ctrl = null; },
+};
+
 export function escena(): EscenaAPI | null {
-  return ctrl ? ctrl.api : null;
+  return ctrl ? apiEstable : null;
 }
 
 function fijarFuente(f: Fuente): void {
@@ -94,6 +145,8 @@ function engancharContexto(c: ControlEscena, tier: Tier): void {
   c.canvas.addEventListener('webglcontextlost', (ev) => {
     ev.preventDefault();   // permite webglcontextrestored
     // La ruta SVG es función de p: retoma en cualquier punto del capítulo.
+    // Sin escena hasta la reconstrucción: las capturas pendientes esperan a la nueva.
+    if (ctrl === c) ctrl = null;
     fijarFuente('svg');
     if (!listoEmitido) emitirListo('svg');
   });
@@ -116,6 +169,7 @@ async function reconstruir(viejo: ControlEscena, tier: Tier): Promise<void> {
     registrarTeletransporte(() => ctrl?.teletransportar());
     engancharContexto(nuevo, tier);
     nuevo.activar();
+    avisarEscena();
     esperarFrontera();
   } catch (err) {
     console.error('[calzo] reconstrucción de la escena', err);
@@ -202,6 +256,7 @@ export async function cargarEscena(o: { contenedor: HTMLElement; progreso: (frac
     fijarTier(tier);
     registrarTeletransporte(() => ctrl?.teletransportar());
     c.activar();
+    avisarEscena();
     estado.escena.lista = true;
     if (!listoEmitido) {
       fijarFuente('webgl');

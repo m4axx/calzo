@@ -14,13 +14,13 @@ export function amortiguadores(q: Calidad, l: Lote): void {
     // Cuerpo del amortiguador (abajo) y cápsula superior.
     const cuerpo = torno(redondear([
       [0.0, 0.012, 0], [0.013, 0.012, 0.004], [0.019, 0.03, 0.006], [0.019, 0.21, 0.004], [0.012, 0.222, 0.003], [0.0, 0.224, 0],
-    ], 3), seg(q, 28, 10));
+    ], 3), seg(q, 20, 10));
     l.add('suspendida', 'resto', 'anodizado', orientar(cuerpo, a, eje));
     const vastago = torno(redondear([[0.0, 0.2, 0], [0.0075, 0.2, 0.001], [0.0075, L - 0.05, 0.001], [0.0, L - 0.05, 0]], 1), seg(q, 16, 8));
     l.add('suspendida', 'resto', 'cromo', orientar(vastago, a, eje));
     const capsula = torno(redondear([
       [0.0, L - 0.07, 0], [0.02, L - 0.07, 0.004], [0.024, L - 0.055, 0.004], [0.024, L - 0.018, 0.006], [0.0, L - 0.012, 0],
-    ], 3), seg(q, 28, 10));
+    ], 3), seg(q, 20, 10));
     l.add('suspendida', 'resto', 'anodizado', orientar(capsula, a, eje));
     // Platillos del muelle (aluminio): el inferior con su tuerca de precarga.
     for (const [h0, h1] of [[0.058, 0.07], [L - 0.083, L - 0.071]] as const) {

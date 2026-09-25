@@ -3,7 +3,7 @@
 // afilado hasta x −0,80 con el piloto de lente ahumada, sin emisión. Las
 // tapas laterales cierran el hueco bajo el asiento (caja de filtro).
 import * as THREE from 'three';
-import { cajaR, extruir, poligonoRedondo, seg, superelipse, superficie, type Calidad, type Lote } from '../geo.ts';
+import { cajaR, poligonoRedondo, seg, superelipse, superficie, type Calidad, type Lote } from '../geo.ts';
 
 type Seccion = readonly [number, number, number, number];   // x, techo, suelo, semiancho
 
@@ -27,7 +27,7 @@ function loft(tabla: readonly Seccion[], capD: number, capT: number, expArriba: 
   };
 }
 
-export function asiento(q: Calidad, l: Lote): void {
+export function tapizado(q: Calidad, l: Lote): void {
   // Asiento: techo = altura de la tapicería; el grosor de 0,07 baja hasta la base.
   const tabla: Seccion[] = [
     [-0.115, 0.836, 0.786, 0.085],
@@ -43,6 +43,9 @@ export function asiento(q: Calidad, l: Lote): void {
   const base: Seccion[] = tabla.map(([x, , s, a]) => [x, s + 0.012, s - 0.004, a + 0.004] as const);
   l.add('suspendida', 'resto', 'anodizado', superficie(loft(base, 0.024, 0.024, 6, 6), seg(q, 48, 20), seg(q, 28, 12)));
 
+}
+
+export function colin(q: Calidad, l: Lote): void {
   // Colín: pintura, afilado hacia atrás.
   const colin: Seccion[] = [
     [-0.56, 0.808, 0.752, 0.122],
@@ -54,14 +57,40 @@ export function asiento(q: Calidad, l: Lote): void {
   // Piloto: lente ahumada sin emisión bajo la punta del colín.
   l.add('suspendida', 'resto', 'faro_lente', cajaR(0.02, 0.02, 0.07, 0.008, [-0.8, 0.812, 0], q, 3));
 
+}
+
+export function tapasLaterales(q: Calidad, l: Lote): void {
   // Tapas laterales (pintura) y caja de filtro detrás (anodizado).
   const forma = poligonoRedondo([
     [-0.085, 0.745, 0.02], [-0.36, 0.765, 0.03], [-0.335, 0.60, 0.05], [-0.12, 0.54, 0.05], [-0.075, 0.62, 0.04],
   ], 5);
-  for (const s of [1, -1]) {
-    const t = extruir(forma, 0.014, 0.004, q, 24, 2);
-    t.translate(0, 0, s * 0.137);
-    l.add('suspendida', 'resto', 'pintura', t);
-  }
+  for (const s of [1, -1]) l.add('suspendida', 'resto', 'pintura', almohada(forma, 0.125, 0.01, 0.012, s, q));
   l.add('suspendida', 'resto', 'anodizado', cajaR(0.24, 0.17, 0.235, 0.02, [-0.22, 0.665, 0], q, 3));
+}
+
+/**
+ * Tapa «almohada»: contorno plano con canto redondeado y cara abombada, para
+ * que la tapa lateral recoja un degradado de reflejo en vez de un plano negro.
+ * s = lado (+1 izquierda). z0 = plano de apoyo.
+ */
+function almohada(forma: THREE.Shape, z0: number, grosor: number, bombeo: number, s: number, q: Calidad): THREE.BufferGeometry {
+  const pts = forma.getSpacedPoints(64);
+  pts.pop();
+  const c = new THREE.Vector2();
+  for (const p of pts) c.add(p);
+  c.multiplyScalar(1 / pts.length);
+  const n = pts.length;
+  const O = (u: number) => {
+    const t = (((u % 1) + 1) % 1) * n;
+    const i = Math.floor(t), f = t - i;
+    return pts[i % n].clone().lerp(pts[(i + 1) % n], f);
+  };
+  const f = (u: number, v: number, out: THREE.Vector3) => {
+    const th = Math.min(1, Math.max(0, v)) * Math.PI / 2;
+    const r = Math.pow(Math.cos(th), 2 / 5), h = Math.pow(Math.sin(th), 2 / 5);
+    const o = O(u);
+    const x = c.x + (o.x - c.x) * r, y = c.y + (o.y - c.y) * r;
+    out.set(x, y, s * (z0 + grosor * h + bombeo * (1 - r * r)));
+  };
+  return superficie(f, seg(q, 64, 24), seg(q, 12, 6));
 }

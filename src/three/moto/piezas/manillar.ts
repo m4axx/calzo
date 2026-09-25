@@ -52,7 +52,7 @@ export function manillar(q: Calidad, l: Lote): void {
     const peso = torno(redondear([
       [0.0, 0.0, 0], [0.0145, 0.0, 0.002], [0.0165, 0.004, 0.003], [0.0165, 0.018, 0.004], [0.0, 0.022, 0],
     ], 3), seg(q, 24, 10));
-    l.add('suspendida', 'mandos', 'aluminio', orientar(peso, pF.clone().addScaledVector(dir, -0.0015), dir));
+    l.add('suspendida', 'mandos', 'diamantado', orientar(peso, pF.clone().addScaledVector(dir, -0.0015), dir));
 
     // Piña de mandos, abrazando el manillar por dentro del puño.
     const pc = enZ(s, 0.228);
@@ -84,12 +84,13 @@ export function manillar(q: Calidad, l: Lote): void {
   }
 
   // Reloj Ø 0,11 en (0,46; 1,02; 0), mirando al piloto y arriba.
-  const eje = new THREE.Vector3(-0.55, 0.84, 0).normalize();
-  const c = new THREE.Vector3(0.46, 1.02, 0);
+  const eje = new THREE.Vector3(-0.62, 0.78, 0).normalize();
+  const c = new THREE.Vector3(0.465, 1.012, 0);
+  // Cuerpo en bote (no en cuenco: un cuenco cromado se lee como retrovisor).
   const cuerpoR = torno(redondear([
-    [0.0, -0.035, 0], [0.034, -0.035, 0.012], [0.052, -0.012, 0.01], [0.055, 0.0, 0.003], [0.049, 0.004, 0],
+    [0.0, -0.048, 0], [0.05, -0.048, 0.01], [0.053, -0.03, 0.006], [0.055, 0.0, 0.003], [0.049, 0.004, 0],
   ], 4), seg(q, 48, 16));
-  l.add('suspendida', 'mandos', 'cromo', orientar(cuerpoR, c, eje));
+  l.add('suspendida', 'mandos', 'anodizado', orientar(cuerpoR, c, eje));
   const bisel = torno(redondear([
     [0.0485, 0.002, 0], [0.0555, 0.0, 0.0015], [0.0565, 0.006, 0.002], [0.051, 0.009, 0.0015], [0.046, 0.007, 0],
   ], 2), seg(q, 48, 16));
@@ -109,6 +110,6 @@ export function manillar(q: Calidad, l: Lote): void {
   const eje0 = torno(redondear([[0.0, 0.0, 0], [0.004, 0.0, 0.001], [0.004, 0.004, 0.001], [0.0, 0.0045, 0]], 1), 12);
   l.add('suspendida', 'mandos', 'cromo', orientar(eje0, c, eje));
   // Soporte del reloj a la tija superior.
-  const soporte = tubo(rutaCodos([c.clone().addScaledVector(eje, -0.03), [0.447, 0.97, 0]], 0.01), 0.008, q, { radial: 12 });
+  const soporte = tubo(rutaCodos([c.clone().addScaledVector(eje, -0.045), [0.452, 0.972, 0]], 0.01), 0.009, q, { radial: 12 });
   l.add('suspendida', 'mandos', 'anodizado', soporte);
 }

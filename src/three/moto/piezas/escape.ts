@@ -26,7 +26,7 @@ export function escape(q: Calidad, l: Lote): void {
     // Brida del puerto (aluminio) con su collarín.
     const brida = torno(redondear([[R_COL, -0.004, 0], [R_COL + 0.009, -0.004, 0.002], [R_COL + 0.009, 0.008, 0.002], [R_COL, 0.009, 0]], 2), seg(q, 24, 10));
     const dir0 = new THREE.Vector3(0.318, 0.43, z).sub(puerto).normalize();
-    l.add('suspendida', 'motor', 'aluminio', orientar(brida, puerto, dir0));
+    l.add('suspendida', 'motor', 'cromo_satinado', orientar(brida, puerto, dir0));
   }
   // Caja de unión bajo el motor (torno a lo largo de x).
   const caja = torno(redondear([

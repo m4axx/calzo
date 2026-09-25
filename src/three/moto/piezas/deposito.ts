@@ -27,7 +27,7 @@ export function seccionDeposito(w: number): { x: number; a: number; techo: numbe
 }
 
 export function deposito(q: Calidad, l: Lote): void {
-  const capF = 0.032, capT = 0.045, c0 = 0.07, c1 = 0.08;
+  const capF = 0.014, capT = 0.045, c0 = 0.05, c1 = 0.08;
   // Caché por v: la sección solo depende de v y superficie() evalúa cada anillo muchas veces.
   const cache = new Map<number, { x: number; a: number; techo: number; suelo: number }>();
   const secc = (w: number) => {
@@ -64,5 +64,5 @@ export function deposito(q: Calidad, l: Lote): void {
   const aro = torno(redondear([[0.03, -0.004, 0], [0.041, -0.002, 0.003], [0.041, 0.003, 0.002], [0.033, 0.005, 0]], 3), seg(q, 40, 14));
   l.add('suspendida', 'deposito', 'cromo', orientar(aro, base, [0.05, 1, 0]));
   const tapon = torno(redondear([[0.0, 0.002, 0], [0.031, 0.002, 0.002], [0.032, 0.009, 0.004], [0.02, 0.013, 0.004], [0.0, 0.0135, 0]], 3), seg(q, 40, 14));
-  l.add('suspendida', 'deposito', 'aluminio', orientar(tapon, base, [0.05, 1, 0]));
+  l.add('suspendida', 'deposito', 'diamantado', orientar(tapon, base, [0.05, 1, 0]));
 }

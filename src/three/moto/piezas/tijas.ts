@@ -11,7 +11,7 @@ import { R_BARRA, Z_HORQ } from './horquilla.ts';
 
 export const T_TIJA_INF = 0.50;
 export const T_TIJA_SUP = 0.66;
-export const W_PIPA = -0.03;       // la pipa va 3 cm por detrás del plano de las barras
+export const W_PIPA = 0;          // la pipa va en el eje de la horquilla (§4.1): el depósito empieza justo detrás
 export const R_PIPA = 0.027;
 const EX = new THREE.Vector3(0, 0, 1);
 
@@ -20,18 +20,43 @@ export function marcoTija(t: number): THREE.Matrix4 {
   return base(ejeHorquilla(t), EX, W_HORQ, D_HORQ);
 }
 
-/** Contorno de la tija en su plano (X = z, Y = w), en sentido antihorario. */
+/** Semiancho y saliente de la oreja de apriete delante de cada boss. */
+const OREJA_W = 0.022, OREJA_S = 0.012;
+
+/**
+ * Contorno de la tija en su plano (X = z, Y = w; +Y hacia delante): barra con
+ * bosses alrededor de las barras y de la pipa, y una oreja de apriete delante
+ * de cada boss (donde van la ranura y los pernos, a la vista de la cámara).
+ */
 function formaTija(rBoss: number, rPipa: number): THREE.Shape {
   const s = new THREE.Shape();
-  const zf = Z_HORQ, wp = W_PIPA;
+  const zf = Z_HORQ, wp = W_PIPA, ow = OREJA_W, ye = rBoss + OREJA_S, f = 0.006;
   const a = (g: number) => (g * Math.PI) / 180;
-  s.moveTo(zf, rBoss);
-  s.lineTo(-zf, rBoss);
-  s.absarc(-zf, 0, rBoss, a(90), a(245), false);
-  s.quadraticCurveTo(-0.055, wp - 0.004, rPipa * Math.cos(a(205)), wp + rPipa * Math.sin(a(205)));
-  s.absarc(0, wp, rPipa, a(205), a(335), false);
-  s.quadraticCurveTo(0.055, wp - 0.004, zf + rBoss * Math.cos(a(-65)), rBoss * Math.sin(a(-65)));
-  s.absarc(zf, 0, rBoss, a(-65), a(90), false);
+  const y1 = Math.sqrt(rBoss * rBoss - ow * ow);
+  const th1 = Math.atan2(y1, ow);
+  s.moveTo(0, rBoss);
+  // Oreja del boss izquierdo (+z).
+  s.lineTo(zf - ow - f, rBoss);
+  s.quadraticCurveTo(zf - ow, rBoss, zf - ow, rBoss + f);
+  s.lineTo(zf - ow, ye - f);
+  s.quadraticCurveTo(zf - ow, ye, zf - ow + f, ye);
+  s.lineTo(zf + ow - f, ye);
+  s.quadraticCurveTo(zf + ow, ye, zf + ow, ye - f);
+  s.lineTo(zf + ow, y1);
+  // Boss izquierdo, pipa y boss derecho por detrás (sentido horario).
+  s.absarc(zf, 0, rBoss, th1, a(-65), true);
+  s.quadraticCurveTo(0.055, wp - 0.004, rPipa * Math.cos(a(-25)), wp + rPipa * Math.sin(a(-25)));
+  s.absarc(0, wp, rPipa, a(-25), a(-155), true);
+  s.quadraticCurveTo(-0.055, wp - 0.004, -zf + rBoss * Math.cos(a(-115)), rBoss * Math.sin(a(-115)));
+  s.absarc(-zf, 0, rBoss, a(-115), -Math.PI - th1, true);
+  // Oreja del boss derecho (−z).
+  s.lineTo(-zf - ow, ye - f);
+  s.quadraticCurveTo(-zf - ow, ye, -zf - ow + f, ye);
+  s.lineTo(-zf + ow - f, ye);
+  s.quadraticCurveTo(-zf + ow, ye, -zf + ow, ye - f);
+  s.lineTo(-zf + ow, rBoss + f);
+  s.quadraticCurveTo(-zf + ow, rBoss, -zf + ow + f, rBoss);
+  s.lineTo(0, rBoss);
   // Taladros de las barras y de la tuerca de la pipa (el bisel los cierra 3 mm).
   for (const z of [zf, -zf]) {
     const h = new THREE.Path();
@@ -48,8 +73,8 @@ function formaTija(rBoss: number, rPipa: number): THREE.Shape {
 export function tornilloAllen(q: Calidad, r = 0.0048, h = 0.0048): THREE.BufferGeometry {
   const rs = r * 0.48;
   const cabeza = torno(redondear([
-    [r * 0.9, -0.002, 0], [r, -0.0015, 0.0004], [r, h, r * 0.18], [rs * 1.02, h, 0],
-  ], 2), seg(q, 20, 10));
+    [r * 0.9, -0.002, 0], [r, -0.0015, 0], [r, h, r * 0.18], [rs * 1.02, h, 0],
+  ], 2), seg(q, 12, 8));
   // Hueco hexagonal: paredes de seis caras mirando hacia dentro y fondo mirando arriba
   // (el perfil baja por la pared y entra hacia el eje: normales (dy, −dx) hacia dentro).
   const hueco = facetar(torno([
@@ -65,40 +90,47 @@ export function matTornillo(p: THREE.Vector3, dir: THREE.Vector3, giro = 0): THR
   return new THREE.Matrix4().compose(p, qa.multiply(qg), new THREE.Vector3(1, 1, 1));
 }
 
-export function tijas(q: Calidad, l: Lote): void {
+/** Una tija: placa, collarines, ranuras y pernos. Devuelve su marco local. */
+function tija(q: Calidad, l: Lote, t: number, grosor: number, rBoss: number, nPernos: number, tornillos: THREE.Matrix4[]): THREE.Matrix4 {
+  const M = marcoTija(t);
+  const g = extruir(formaTija(rBoss, 0.031), grosor, 0.003, q, 20, 2);
+  g.applyMatrix4(M);
+  l.add('suspendida', 'tija', 'aluminio', g);
+  // Collarines: aro fino donde cada barra entra y sale de la tija (cara superior e inferior).
+  for (const z of [Z_HORQ, -Z_HORQ]) {
+    for (const lado of [-1, 1]) {
+      const p = new THREE.Vector3(z, 0, lado * (grosor / 2 + 0.0012)).applyMatrix4(M);
+      l.add('suspendida', 'tija', 'cromo', collarin(p, D_HORQ, R_BARRA, q, 0.0022));
+    }
+  }
+  // Ranura de apriete: una lámina oscura de 1,6 mm que asoma apenas por delante y por las caras.
+  for (const s of [-1, 1]) {
+    const largo = rBoss + OREJA_S - R_BARRA;
+    const ranura = cajaR(0.0016, largo + 0.001, grosor + 0.0012, 0.0005, [s * Z_HORQ, R_BARRA + largo / 2 + 0.0006, 0], q, 1);
+    ranura.applyMatrix4(M);
+    l.add('suspendida', 'tija', 'anodizado', ranura);
+    // Pernos transversales: cabeza en la cara exterior de la oreja, mirando hacia fuera.
+    for (let k = 0; k < nPernos; k++) {
+      const dz = nPernos === 1 ? 0 : (k - 0.5) * (grosor * 0.46);
+      const p = new THREE.Vector3(s * (Z_HORQ + OREJA_W + 0.0003), rBoss + OREJA_S * 0.45, dz).applyMatrix4(M);
+      const dir = new THREE.Vector3(s, 0, 0).transformDirection(M);
+      tornillos.push(matTornillo(p, dir, k * 0.4 + s));
+    }
+  }
+  return M;
+}
+
+/** Tija inferior (t 0,50; grosor 0,03; dos pernos por lado). */
+export function tijaInferior(q: Calidad, l: Lote): void {
   const tornillos: THREE.Matrix4[] = [];
-  const tija = (t: number, grosor: number, rBoss: number, nPernos: number) => {
-    const M = marcoTija(t);
-    const g = extruir(formaTija(rBoss, 0.031), grosor, 0.003, q, 20, 2);
-    g.applyMatrix4(M);
-    l.add('suspendida', 'tija', 'aluminio', g);
-    // Collarines: aro fino donde cada barra entra y sale de la tija (cara superior e inferior).
-    for (const z of [Z_HORQ, -Z_HORQ]) {
-      for (const lado of [-1, 1]) {
-        const p = new THREE.Vector3(z, 0, lado * (grosor / 2 + 0.0012)).applyMatrix4(M);
-        l.add('suspendida', 'tija', 'cromo', collarin(p, D_HORQ, R_BARRA, q, 0.0022));
-      }
-    }
-    // Orejetas de apriete detrás de cada boss, partidas por la ranura (1,6 mm).
-    for (const s of [-1, 1]) {
-      for (const lado of [-1, 1]) {
-        const ancho = 0.022;
-        const o = cajaR(ancho, 0.026, grosor - 0.002, 0.003, [s * Z_HORQ + lado * (ancho / 2 + 0.0008), -rBoss - 0.006, 0], q, 2);
-        o.applyMatrix4(M);
-        l.add('suspendida', 'tija', 'aluminio', o);
-      }
-      // Pernos transversales: cabeza en la cara exterior de la orejeta, mirando hacia fuera.
-      for (let k = 0; k < nPernos; k++) {
-        const dz = nPernos === 1 ? 0 : (k - 0.5) * (grosor * 0.46);
-        const p = new THREE.Vector3(s * (Z_HORQ + 0.0228), -rBoss - 0.007, dz).applyMatrix4(M);
-        const dir = new THREE.Vector3(s, 0, 0).transformDirection(M);
-        tornillos.push(matTornillo(p, dir, k * 0.4 + s));
-      }
-    }
-    return M;
-  };
-  tija(T_TIJA_INF, 0.03, 0.036, 2);
-  const Ms = tija(T_TIJA_SUP, 0.025, 0.034, 1);
+  tija(q, l, T_TIJA_INF, 0.03, 0.036, 2, tornillos);
+  l.instancias('tornillos_tija', 'suspendida', 'tija', 'anodizado', tornilloAllen(q), tornillos);
+}
+
+/** Tija superior (t 0,66; grosor 0,025; un perno por lado), pipa, tuerca de dirección y torretas. */
+export function tijaSuperior(q: Calidad, l: Lote): void {
+  const tornillos: THREE.Matrix4[] = [];
+  const Ms = tija(q, l, T_TIJA_SUP, 0.025, 0.034, 1, tornillos);
 
   // Pipa de dirección (chasis) entre las tijas, con sus tazas.
   const pipaBase = ejeHorquilla(0, W_PIPA);
@@ -133,7 +165,7 @@ export function tijas(q: Calidad, l: Lote): void {
     torreta.rotateX(Math.PI / 2);
     torreta.translate(x, cLocal.y, 0);
     torreta.applyMatrix4(Ms);
-    l.add('suspendida', 'tija', 'aluminio', torreta);
+    l.add('suspendida', 'tija', 'anodizado', torreta);
     // Abrazadera (tapa superior) que abraza el manillar.
     const tapaA = cajaR(0.026, 0.03, 0.02, 0.006, [0, 0, 0], q, 3);
     const m = new THREE.Matrix4().makeTranslation(x, cLocal.y, cLocal.z + 0.008);

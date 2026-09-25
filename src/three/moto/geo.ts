@@ -279,43 +279,36 @@ export function catenaria(a: THREE.Vector3, b: THREE.Vector3, f: number, n = 12,
  */
 export function superficie(f: (u: number, v: number, out: THREE.Vector3) => void, nu: number, nv: number,
   o: { cerradaU?: boolean; uvEscala?: [number, number] } = {}): THREE.BufferGeometry {
-  const pos: number[] = [], nor: number[] = [], uv: number[] = [];
+  // Sin objetos por vértice: todo en arrays tipados y vectores de trabajo (menos basura, menos pausas de GC).
+  const n = (nu + 1) * (nv + 1);
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
   const P = new THREE.Vector3(), A = new THREE.Vector3(), B = new THREE.Vector3(), du = new THREE.Vector3(), dv = new THREE.Vector3();
   const e = 1e-3;
   const [su, sv] = o.uvEscala ?? [1, 1];
-  const centro = new THREE.Vector3();
-  const pts: THREE.Vector3[] = [];
-  for (let j = 0; j <= nv; j++) {
-    for (let i = 0; i <= nu; i++) {
-      const u = i / nu, v = j / nv;
-      f(u, v, P);
-      pts.push(P.clone());
-      centro.add(P);
+  let cx = 0, cy = 0, cz = 0;
+  for (let j = 0, k = 0; j <= nv; j++) {
+    for (let i = 0; i <= nu; i++, k++) {
+      f(i / nu, j / nv, P);
+      pos[k * 3] = P.x; pos[k * 3 + 1] = P.y; pos[k * 3 + 2] = P.z;
+      cx += P.x; cy += P.y; cz += P.z;
+      uv[k * 2] = (i / nu) * su; uv[k * 2 + 1] = (j / nv) * sv;
     }
   }
-  centro.multiplyScalar(1 / pts.length);
+  cx /= n; cy /= n; cz /= n;
   let signo = 0;
-  const normales: THREE.Vector3[] = [];
-  for (let j = 0; j <= nv; j++) {
-    for (let i = 0; i <= nu; i++) {
+  for (let j = 0, k = 0; j <= nv; j++) {
+    const vv = Math.min(1 - 2 * e, Math.max(2 * e, j / nv));
+    for (let i = 0; i <= nu; i++, k++) {
       const u = i / nu;
-      const vv = Math.min(1 - 2 * e, Math.max(2 * e, j / nv));
       f(u + e, vv, A); f(u - e, vv, B); du.subVectors(A, B);
       f(u, vv + e, A); f(u, vv - e, B); dv.subVectors(A, B);
-      const n = new THREE.Vector3().crossVectors(du, dv).normalize();
-      normales.push(n);
-      const p = pts[j * (nu + 1) + i];
-      signo += Math.sign(n.dot(p.clone().sub(centro)));
+      P.crossVectors(du, dv).normalize();
+      nor[k * 3] = P.x; nor[k * 3 + 1] = P.y; nor[k * 3 + 2] = P.z;
+      signo += Math.sign(P.x * (pos[k * 3] - cx) + P.y * (pos[k * 3 + 1] - cy) + P.z * (pos[k * 3 + 2] - cz));
     }
   }
   const s = signo >= 0 ? 1 : -1;
-  for (let k = 0; k < pts.length; k++) {
-    const p = pts[k], n = normales[k].multiplyScalar(s);
-    pos.push(p.x, p.y, p.z);
-    nor.push(n.x, n.y, n.z);
-    const i = k % (nu + 1), j = Math.floor(k / (nu + 1));
-    uv.push((i / nu) * su, (j / nv) * sv);
-  }
+  if (s < 0) for (let k = 0; k < nor.length; k++) nor[k] = -nor[k];
   const idx: number[] = [];
   for (let j = 0; j < nv; j++) {
     for (let i = 0; i < nu; i++) {
@@ -324,9 +317,9 @@ export function superficie(f: (u: number, v: number, out: THREE.Vector3) => void
     }
   }
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   g.setIndex(idx);
   return g;
 }
@@ -380,7 +373,10 @@ export class Lote {
   add(grupo: Grupo, pieza: PiezaId, rol: Rol, ...geos: THREE.BufferGeometry[]): void {
     for (const geo of geos) this.partes.push({ geo, rol, grupo, pieza });
   }
+  /** Instancias con nombre: si ya existe un lote con ese nombre, se le suman las matrices (un solo draw call). */
   instancias(nombre: string, grupo: Grupo, pieza: PiezaId, rol: Rol, geo: THREE.BufferGeometry, matrices: THREE.Matrix4[]): void {
+    const previo = this.inst.find((i) => i.nombre === nombre);
+    if (previo) { previo.matrices.push(...matrices); geo.dispose(); return; }
     this.inst.push({ nombre, geo, rol, grupo, pieza, matrices });
   }
 }
@@ -403,4 +399,51 @@ export function poligonoRedondo(esquinas: readonly (readonly [number, number, nu
   const pts = redondear([medio, ...esquinas, medio], pasos);
   pts.pop();
   return new THREE.Shape(pts);
+}
+
+/**
+ * Caja con aristas achaflanadas (44 triángulos): para piezas pequeñas que se
+ * repiten mucho (eslabones, aletas), donde un RoundedBox gastaría 300.
+ * Normales planas: el chaflán es lo que coge la luz.
+ */
+export function cajaChaflan(w: number, h: number, d: number, c: number): THREE.BufferGeometry {
+  const x = w / 2, y = h / 2, z = d / 2;
+  const pos: number[] = [];
+  const quad = (a: number[], b: number[], cc: number[], dd: number[]) => { pos.push(...a, ...b, ...cc, ...a, ...cc, ...dd); };
+  const tri = (a: number[], b: number[], cc: number[]) => { pos.push(...a, ...b, ...cc); };
+  // Vértice de la esquina (sx, sy, sz) desplazado por el chaflán en el eje `eje`.
+  const v = (sx: number, sy: number, sz: number, eje: 0 | 1 | 2) => [
+    sx * (x - (eje === 0 ? 0 : c)), sy * (y - (eje === 1 ? 0 : c)), sz * (z - (eje === 2 ? 0 : c)),
+  ];
+  const S = [-1, 1];
+  // Caras: el vértice de cada esquina que pertenece a la cara es el desplazado en el eje de la cara.
+  for (const s of S) {
+    // ±X
+    const a = v(s, -1, -1, 0), b = v(s, 1, -1, 0), cc = v(s, 1, 1, 0), dd = v(s, -1, 1, 0);
+    if (s > 0) quad(a, b, cc, dd); else quad(a, dd, cc, b);
+    // ±Y
+    const e = v(-1, s, -1, 1), f = v(-1, s, 1, 1), g = v(1, s, 1, 1), hh = v(1, s, -1, 1);
+    if (s > 0) quad(e, f, g, hh); else quad(e, hh, g, f);
+    // ±Z
+    const i = v(-1, -1, s, 2), j = v(1, -1, s, 2), k = v(1, 1, s, 2), m = v(-1, 1, s, 2);
+    if (s > 0) quad(i, j, k, m); else quad(i, m, k, j);
+  }
+  // Chaflanes de las 12 aristas y triángulos de las 8 esquinas; la orientación se corrige después.
+  for (const sy of S) for (const sz of S) quad(v(-1, sy, sz, 1), v(1, sy, sz, 1), v(1, sy, sz, 2), v(-1, sy, sz, 2));
+  for (const sx of S) for (const sz of S) quad(v(sx, -1, sz, 0), v(sx, 1, sz, 0), v(sx, 1, sz, 2), v(sx, -1, sz, 2));
+  for (const sx of S) for (const sy of S) quad(v(sx, sy, -1, 0), v(sx, sy, 1, 0), v(sx, sy, 1, 1), v(sx, sy, -1, 1));
+  for (const sx of S) for (const sy of S) for (const sz of S) tri(v(sx, sy, sz, 0), v(sx, sy, sz, 1), v(sx, sy, sz, 2));
+  // Orientación: cada triángulo debe mirar hacia fuera del centro (la caja es convexa).
+  const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3(), N = new THREE.Vector3(), M = new THREE.Vector3();
+  for (let t = 0; t < pos.length; t += 9) {
+    A.fromArray(pos, t); B.fromArray(pos, t + 3); C.fromArray(pos, t + 6);
+    N.subVectors(B, A).cross(M.subVectors(C, A));
+    const centro = A.clone().add(B).add(C);
+    if (N.dot(centro) < 0) for (let k = 0; k < 3; k++) { const tmp = pos[t + 3 + k]; pos[t + 3 + k] = pos[t + 6 + k]; pos[t + 6 + k] = tmp; }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+  return g;
 }

@@ -270,6 +270,9 @@ export async function crearEscena(o: { contenedor: HTMLElement; tier: Tier; prog
 
   function frameDirector(t: number, dt: number): void {
     if (!activo || perdido || pausada) return;
+    // Con la ruta SVG o en movimiento reducido el canvas no se ve: el director
+    // no trabaja (al volver a mostrarse, frameEscena teletransporta y aplica).
+    if (estado.fuente !== 'webgl' || estado.modo.reducido) return;
     if (director.actualizar(estado, t, dt)) sucio = true;
   }
 
@@ -382,6 +385,12 @@ export async function crearEscena(o: { contenedor: HTMLElement; tier: Tier; prog
     quitar.length = 0;
     canvas.removeEventListener('webglcontextlost', alPerderContexto);
     capturador.dispose();
+    if (perdido) {
+      // Los objetos GL pertenecían al contexto perdido: borrarlos solo produce
+      // avisos de WebGL. Se sueltan y los recoge el GC.
+      canvas.remove();
+      return;
+    }
     for (const c of cinchas) c.dispose();
     calzo.dispose();
     plataforma.dispose();

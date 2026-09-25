@@ -81,6 +81,6 @@ export function llanta(q: Calidad, l: Lote, x: number, b: number, anchoBuje: num
     [0.0, -h - 0.004, 0], [0.022, -h - 0.004, 0.003], [0.030, -h, 0.003], [0.030, -h + 0.012, 0.004],
     [0.062, -h + 0.02, 0.006], [0.062, h - 0.02, 0.006], [0.030, h - 0.012, 0.004], [0.030, h, 0.003],
     [0.022, h + 0.004, 0.003], [0.0, h + 0.004, 0],
-  ], 3);
-  l.add(grupo, pieza, 'anodizado', orientar(torno(buje, seg(q, 32, 12)), c, [0, 0, 1]));
+  ], 2);
+  l.add(grupo, pieza, 'anodizado', orientar(torno(buje, seg(q, 24, 12)), c, [0, 0, 1]));
 }

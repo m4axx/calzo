@@ -125,29 +125,39 @@ export function crearDirector(ctx: {
     const [pos, mira] = posMira(id, u);
     const quat = quatPlano(id, compacto, u);
     const fov = Math.min(30, P.fov);
+    const e = compacto && P.encuadreCompacto ? P.encuadreCompacto : P.encuadre;
+    const punto = puntoMundo(id, mira, new THREE.Vector3());
     if (compacto && P.encajeCompacto) {
+      // Encaje por caja (§4.9): d' = d · max(1, …), dos iteraciones. El ancho y
+      // el alto se miden respecto al punto encuadrado, para que la caja quepa en
+      // el 90 % del viewport también después del desplazamiento de vista.
       const pts = puntosEncaje(P.encajeCompacto, apoyoEncaje(id));
       const dir = _w.subVectors(mira, pos);
       let d = dir.length();
       dir.normalize();
+      const mx = 0.05 * w, my = 0.05 * h;
       for (let it = 0; it < 2; it++) {
         prepararTmp(_v.copy(mira).addScaledVector(dir, -d), quat, fov, w, hc);
+        const c = punto.clone().project(tmp);
+        const cx = (c.x + 1) / 2 * w, cy = (1 - c.y) / 2 * hc;
         let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
         for (const p of pts) {
           const q = p.clone().project(tmp);
           const px = (q.x + 1) / 2 * w, py = (1 - q.y) / 2 * hc;
           x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
         }
-        const k = Math.max(1, (x1 - x0) / (0.9 * w), (y1 - y0) / (0.9 * h));
+        const k = Math.max(1,
+          (x1 - x0) / (0.9 * w), (y1 - y0) / (0.9 * h),
+          (cx - x0) / Math.max(1, e[0] * w - mx), (x1 - cx) / Math.max(1, w - mx - e[0] * w),
+          (cy - y0) / Math.max(1, e[1] * h - my), (y1 - cy) / Math.max(1, h - my - e[1] * h));
         if (k <= 1.0001) break;
         d *= k;
       }
       pos.copy(mira).addScaledVector(dir, -d);
     }
     prepararTmp(pos, quat, fov, w, hc);
-    const pt = puntoMundo(id, mira, new THREE.Vector3()).project(tmp);
+    const pt = punto.project(tmp);
     const px = (pt.x + 1) / 2 * w, py = (1 - pt.y) / 2 * hc;
-    const e = compacto && P.encuadreCompacto ? P.encuadreCompacto : P.encuadre;
     return { pos: pos.clone(), quat: quat.clone(), fov, offset: [px - e[0] * w, py - e[1] * h] };
   }
 
@@ -327,7 +337,7 @@ export function crearDirector(ctx: {
     const w = e.vp.w || window.innerWidth, h = e.vp.h || window.innerHeight, hc = Math.max(h, altoCanvas());
     const rafaga = e.scroll.saltando || Math.abs(e.scroll.vel) > 3000;
     const tAhora = ahora();
-    const dtT = Math.max(0, Math.min(0.05, tAhora - tAhoraPrev));
+    const dtT = Math.max(0, Math.min(0.1, tAhora - tAhoraPrev));
     tAhoraPrev = tAhora;
 
     let sucio = forzar || teleport;

@@ -39,7 +39,7 @@ export function horquilla(q: Calidad, l: Lote): void {
       [0, 0.690, 0], [0.0195, 0.690, 0.001], [0.0195, 0.708, 0.002], [0.012, 0.712, 0.002], [0.008, 0.712, 0.001],
       [0.008, 0.722, 0.001], [0, 0.722, 0],
     ], 2), 6);
-    l.add('suspendida', 'horquilla', 'aluminio', facetar(orientar(tapon, base, D_HORQ)));
+    l.add('suspendida', 'horquilla', 'anodizado', facetar(orientar(tapon, base, D_HORQ)));
   }
   // Eje delantero: pasa de lado a lado con tuercas en los extremos.
   const eje = torno(redondear([

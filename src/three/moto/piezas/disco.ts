@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { cajaR, extruir, orientar, redondear, seg, torno, type Calidad, type Grupo, type Lote } from '../geo.ts';
 import type { PiezaId } from '../../contrato-tipos.ts';
 
-function anillo(rExt: number, rInt: number, agujeros: { r: number; n: number; d: number; fase?: number }[]): THREE.Shape {
+function anillo(rExt: number, rInt: number, agujeros: { r: number; n: number; d: number; fase?: number }[], nLados = 10): THREE.Shape {
   const s = new THREE.Shape();
   s.absarc(0, 0, rExt, 0, Math.PI * 2, false);
   const h = new THREE.Path();
@@ -18,7 +18,7 @@ function anillo(rExt: number, rInt: number, agujeros: { r: number; n: number; d:
       const ang = (k / a.n) * Math.PI * 2 + (a.fase ?? 0);
       const cx = a.r * Math.cos(ang), cy = a.r * Math.sin(ang);
       const pts: THREE.Vector2[] = [];
-      for (let i = 10; i > 0; i--) { const t = (i / 10) * Math.PI * 2; pts.push(new THREE.Vector2(cx + Math.cos(t) * a.d / 2, cy + Math.sin(t) * a.d / 2)); }
+      for (let i = nLados; i > 0; i--) { const t = (i / nLados) * Math.PI * 2; pts.push(new THREE.Vector2(cx + Math.cos(t) * a.d / 2, cy + Math.sin(t) * a.d / 2)); }
       s.holes.push(new THREE.Path(pts));
     }
   }
@@ -51,7 +51,7 @@ function arana(rExt: number, rInt: number): THREE.Shape {
 
 function disco(q: Calidad, l: Lote, x: number, z: number, rExt: number, grupo: Grupo, pieza: PiezaId): void {
   const rInt = rExt * 0.72;
-  const pista = extruir(anillo(rExt, rInt, [{ r: (rExt + rInt) / 2, n: 18, d: 0.0075 }]), 0.005, 0.0006, q, 56, 1);
+  const pista = extruir(anillo(rExt, rInt, [{ r: (rExt + rInt) / 2, n: 18, d: 0.0075 }], seg(q, 10, 6)), 0.005, 0.0006, q, 48, 1);
   pista.translate(x, 0.31, z);
   l.add(grupo, pieza, 'metal_disco', pista);
   const ar = extruir(arana(rInt + 0.004, 0.05), 0.004, 0.0008, q, 40, 1);
@@ -62,7 +62,7 @@ function disco(q: Calidad, l: Lote, x: number, z: number, rExt: number, grupo: G
   for (let k = 0; k < nB; k++) {
     const a = (k / nB) * Math.PI * 2;
     const r = rInt + 0.002;
-    const b = torno(redondear([[0, -0.004, 0], [0.0045, -0.004, 0.001], [0.0045, 0.004, 0.001], [0, 0.004, 0]], 1), seg(q, 10, 6));
+    const b = torno(redondear([[0, -0.004, 0], [0.0045, -0.004, 0.001], [0.0045, 0.004, 0.001], [0, 0.004, 0]], 1), seg(q, 8, 6));
     orientar(b, new THREE.Vector3(x + r * Math.cos(a), 0.31 + r * Math.sin(a), z), [0, 0, 1]);
     l.add(grupo, pieza, 'aluminio', b);
   }
@@ -80,7 +80,7 @@ function pinza(q: Calidad, l: Lote, x: number, z: number, rDisco: number, grupo:
   // Tapa del pistón y los dos tornillos de anclaje, en la cara exterior.
   const tapaP = torno(redondear([[0, 0, 0], [0.013, 0, 0.002], [0.013, 0.004, 0.0015], [0, 0.004, 0]], 2), seg(q, 16, 8));
   orientar(tapaP, c.clone().setZ(z + Math.sign(z) * 0.0215), [0, 0, Math.sign(z)]);
-  l.add(grupo, pieza, 'aluminio', tapaP);
+  l.add(grupo, pieza, 'diamantado', tapaP);
   // Soporte de la pinza hasta su anclaje (botella o basculante).
   const dir = anclaje.clone().sub(c);
   const L = dir.length();
@@ -91,12 +91,10 @@ function pinza(q: Calidad, l: Lote, x: number, z: number, rDisco: number, grupo:
   l.add(grupo, pieza, 'anodizado', brazo);
 }
 
-export function discosDel(q: Calidad, l: Lote): void {
-  for (const z of [0.07, -0.07]) {
-    disco(q, l, 0.725, z, 0.16, 'delantera', 'rueda_del');
-    // Anclaje de la pinza delantera: la base de la botella, algo por encima del eje.
-    pinza(q, l, 0.725, z, 0.16, 'delantera', 'rueda_del', new THREE.Vector3(0.70, 0.36, z));
-  }
+export function discoDel(q: Calidad, l: Lote, z: number): void {
+  disco(q, l, 0.725, z, 0.16, 'delantera', 'rueda_del');
+  // Anclaje de la pinza delantera: la base de la botella, algo por encima del eje.
+  pinza(q, l, 0.725, z, 0.16, 'delantera', 'rueda_del', new THREE.Vector3(0.70, 0.36, z));
 }
 
 export function discoTras(q: Calidad, l: Lote): void {

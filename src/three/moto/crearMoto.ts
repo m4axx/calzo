@@ -13,30 +13,31 @@ import { fusionar, prepararPieza } from './preparar.ts';
 import { crearTexturas } from './texturas.ts';
 import { neumatico } from './piezas/neumatico.ts';
 import { llanta } from './piezas/llanta.ts';
-import { discoTras, discosDel } from './piezas/disco.ts';
+import { discoDel, discoTras } from './piezas/disco.ts';
 import { horquilla } from './piezas/horquilla.ts';
-import { tijas } from './piezas/tijas.ts';
+import { tijaInferior, tijaSuperior } from './piezas/tijas.ts';
 import { manillar } from './piezas/manillar.ts';
 import { faro } from './piezas/faro.ts';
 import { deposito } from './piezas/deposito.ts';
-import { asiento } from './piezas/asiento.ts';
+import { colin, tapasLaterales, tapizado } from './piezas/asiento.ts';
 import { chasis } from './piezas/chasis.ts';
 import { motor } from './piezas/motor.ts';
 import { escape } from './piezas/escape.ts';
 import { basculante } from './piezas/basculante.ts';
 import { amortiguadores } from './piezas/amortiguador.ts';
 import { cadena } from './piezas/cadena.ts';
-import { detalles } from './piezas/detalles.ts';
+import { guardabarros, latiguillos, mandosPie } from './piezas/detalles.ts';
 
 const CONSTRUCTORES: readonly (readonly [string, Constructor])[] = [
   ['neumatico.del', (q, l) => l.add('delantera', 'rueda_del', 'goma', neumatico(q, 0.725, 0.12))],
   ['neumatico.tras', (q, l) => l.add('trasera', 'resto', 'goma', neumatico(q, -0.725, 0.17))],
   ['llanta.del', (q, l) => llanta(q, l, 0.725, 0.046, 0.13, 'delantera', 'rueda_del')],
   ['llanta.tras', (q, l) => llanta(q, l, -0.725, 0.066, 0.17, 'trasera', 'resto')],
-  ['disco.del', discosDel], ['disco.tras', discoTras], ['horquilla', horquilla],
-  ['tijas', tijas], ['manillar', manillar], ['faro', faro], ['deposito', deposito], ['asiento', asiento],
+  ['disco.del.I', (q, l) => discoDel(q, l, 0.07)], ['disco.del.D', (q, l) => discoDel(q, l, -0.07)], ['disco.tras', discoTras], ['horquilla', horquilla],
+  ['tija.inf', tijaInferior], ['tija.sup', tijaSuperior], ['manillar', manillar], ['faro', faro], ['deposito', deposito], ['asiento', tapizado], ['colin', colin], ['tapas', tapasLaterales],
   ['chasis', chasis], ['motor', motor], ['escape', escape], ['basculante', basculante],
-  ['amortiguador', amortiguadores], ['cadena', cadena], ['detalles', detalles],
+  ['amortiguador', amortiguadores], ['cadena', cadena],
+  ['guardabarros', guardabarros], ['latiguillos', latiguillos], ['mandos.pie', mandosPie],
 ];
 
 const GRUPOS: readonly Grupo[] = ['suspendida', 'delantera', 'trasera'];
@@ -51,7 +52,10 @@ function ceder(): Promise<void> {
 export interface MedidasMoto { tareas: Record<string, number>; maxMs: number; triangulos: number; mallas: number; trisPieza: Record<string, number> }
 
 export const crearMoto: CrearMoto = async (o) => {
-  const q = { f: o.tier === 'alto' ? 1 : 0.5 };
+  // Segmentos por tier (§4.2): medio a la mitad. Las piezas que llevan los primeros
+  // planos (depósito, neumáticos, tijas, faro) conservan su densidad; el resto baja un 25 %.
+  const base = o.tier === 'alto' ? 1 : 0.5;
+  const HEROES = new Set(['neumatico.del', 'neumatico.tras', 'tija.inf', 'tija.sup', 'deposito', 'faro']);
   const medidas: MedidasMoto = { tareas: {}, maxMs: 0, triangulos: 0, mallas: 0, trisPieza: {} };
   const medir = (nombre: string, t0: number) => {
     const ms = performance.now() - t0;
@@ -74,7 +78,7 @@ export const crearMoto: CrearMoto = async (o) => {
   for (const [nombre, fn] of CONSTRUCTORES) {
     t0 = performance.now();
     const desde = lote.partes.length, desdeI = lote.inst.length;
-    fn(q, lote);
+    fn({ f: base * (HEROES.has(nombre) ? 1 : 0.75) }, lote);
     let tris = 0;
     for (let i = desde; i < lote.partes.length; i++) {
       const p = lote.partes[i];

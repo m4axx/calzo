@@ -7,7 +7,7 @@ import {
   superficie, torno, tubo, type Calidad, type Grupo, type Lote, type V3,
 } from '../geo.ts';
 
-function guardabarros(q: Calidad, l: Lote): void {
+function delantero(q: Calidad, l: Lote): void {
   const c = new THREE.Vector3(0.725, 0.31, 0);
   const R = 0.352, th0 = (40 * Math.PI) / 180, th1 = th0 + (130 * Math.PI) / 180;
   const f = (u: number, v: number, out: THREE.Vector3) => {
@@ -29,10 +29,6 @@ function guardabarros(q: Calidad, l: Lote): void {
     taco.rotateZ(thB);
     taco.translate(p.x, p.y, p.z);
     l.add('delantera', 'resto', 'anodizado', taco);
-    const pb = ejeHorquilla(0.13, 0, s * 0.074);
-    const th = (60 * Math.PI) / 180;
-    const pf = c.clone().add(new THREE.Vector3(Math.cos(th), Math.sin(th), 0).multiplyScalar(R - 0.012)).setZ(s * 0.062);
-    l.add('delantera', 'resto', 'anodizado', tubo(rutaCodos([pb, pf], 0.02), 0.0045, q, { radial: 10 }));
   }
 }
 
@@ -67,14 +63,16 @@ function hugger(q: Calidad, l: Lote): void {
   l.add('trasera', 'resto', 'anodizado', tubo(rutaCodos([pf, pf.clone().setZ(0.11), pb], 0.015), 0.005, q, { radial: 10 }));
 }
 
-export function detalles(q: Calidad, l: Lote): void {
-  guardabarros(q, l);
+export function guardabarros(q: Calidad, l: Lote): void {
+  delantero(q, l);
   hugger(q, l);
+}
 
+export function latiguillos(q: Calidad, l: Lote): void {
   // Latiguillos: bomba (manillar derecho) → distribuidor bajo la tija → pinzas.
   const bomba: V3 = [0.43, 0.955, -0.19];
   // El distribuidor va detrás del plano de las barras, bajo la tija inferior, pegado a la pipa.
-  const pd = ejeHorquilla(0.44, -0.035, 0);
+  const pd = ejeHorquilla(0.44, -0.052, 0);
   const distrib: V3 = [pd.x, pd.y, 0];
   const cat = catenaria(new THREE.Vector3(...bomba), new THREE.Vector3(0.43, 0.84, -0.06), 0.025, 6)
     .concat([new THREE.Vector3(pd.x - 0.02, pd.y + 0.04, -0.02), new THREE.Vector3(...distrib)]);
@@ -95,10 +93,13 @@ export function detalles(q: Calidad, l: Lote): void {
 
   // Cable de embrague (izquierda) y cables de gas (derecha) con su catenaria.
   // Todos pasan por detrás de la pipa, nunca por delante de las barras.
-  cable(q, l, 'suspendida', [[0.425, 0.962, 0.19], [0.405, 0.93, 0.13], [0.40, 0.82, 0.06], [0.35, 0.64, 0.075], [0.22, 0.53, 0.14], [0.10, 0.475, 0.162]]);
+  cable(q, l, 'suspendida', [[0.425, 0.962, 0.19], [0.41, 0.95, 0.16], [0.425, 0.88, 0.07], [0.43, 0.78, 0.045], [0.36, 0.64, 0.075], [0.22, 0.53, 0.14], [0.10, 0.475, 0.162]]);
   cable(q, l, 'suspendida', [[0.425, 0.958, -0.205], [0.40, 0.925, -0.14], [0.395, 0.83, -0.06], [0.30, 0.745, -0.066], [0.12, 0.72, -0.064]]);
   cable(q, l, 'suspendida', [[0.427, 0.952, -0.215], [0.405, 0.92, -0.15], [0.40, 0.82, -0.072], [0.30, 0.737, -0.078], [0.12, 0.712, -0.07]]);
 
+}
+
+export function mandosPie(q: Calidad, l: Lote): void {
   // Estriberas con su soporte, palanca de cambio (izquierda) y pedal de freno (derecha).
   for (const s of [1, -1]) {
     const soporte = poligonoRedondo([[-0.25, 0.43, 0.01], [-0.16, 0.40, 0.012], [-0.15, 0.345, 0.012], [-0.21, 0.335, 0.012]], 3);

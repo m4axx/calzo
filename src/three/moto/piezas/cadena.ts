@@ -3,7 +3,7 @@
 // placas alternan de grosor (interior/exterior) para que se lea como cadena.
 // Va en z 0,10 (no 0,12): en 0,12 atravesaba el brazo izquierdo del basculante.
 import * as THREE from 'three';
-import { cajaR, type Calidad, type Lote } from '../geo.ts';
+import { cajaChaflan, type Calidad, type Lote } from '../geo.ts';
 import { EJE_TRAS, Z_CADENA } from './basculante.ts';
 
 interface Tramo { largo: number; en(s: number): { p: THREE.Vector2; t: THREE.Vector2 } }
@@ -53,6 +53,6 @@ export function cadena(q: Calidad, l: Lote): void {
     mats.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, Z_CADENA), quat, new THREE.Vector3(1, k % 2 === 0 ? 1 : 0.92, grueso)));
   }
   // Eslabón: RoundedBox 0,016 × 0,009 × 0,010 (§4.2), con aPieza en la geometría base.
-  const eslabon = cajaR(0.016, 0.009, 0.010, 0.0025, [0, 0, 0], q, 1);
+  const eslabon = cajaChaflan(0.016, 0.009, 0.010, 0.0022);
   l.instancias('cadena', 'trasera', 'resto', 'metal_disco', eslabon, mats);
 }

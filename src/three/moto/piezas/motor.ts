@@ -4,7 +4,7 @@
 // culata, tapa de balancines, tapas laterales de aluminio, carburadores con
 // filtros y tornillería. Los filos de las aletas son lo que coge la luz.
 import * as THREE from 'three';
-import { cajaR, extruir, orientar, poligonoRedondo, redondear, seg, torno, type Calidad, type Lote } from '../geo.ts';
+import { cajaChaflan, cajaR, extruir, orientar, poligonoRedondo, redondear, seg, torno, type Calidad, type Lote } from '../geo.ts';
 import { matTornillo, tornilloAllen } from './tijas.ts';
 
 const INCL = (20 * Math.PI) / 180;
@@ -36,28 +36,46 @@ export function motor(q: Calidad, l: Lote): void {
   const carter = extruir(poligonoRedondo(esquinas, 5), 0.30, 0.008, q, 24, 3);
   l.add('suspendida', 'motor', 'fundicion', carter);
 
-  // Tapas laterales Ø 0,16 (alternador a la izquierda, embrague a la derecha) y tornillería.
   const tornillos: THREE.Matrix4[] = [];
+  // Tapas del cárter: una placa por lado, 1,4 cm metida en el contorno, con su junta
+  // y tornillería perimetral. Es lo que convierte el bloque extruido en fundición.
+  const tapaCarter: [number, number, number][] = [
+    [0.205, 0.315, 0.025], [0.228, 0.41, 0.025], [0.10, 0.478, 0.03], [-0.11, 0.497, 0.025], [-0.178, 0.40, 0.03],
+    [-0.137, 0.298, 0.03], [0.05, 0.26, 0.04],
+  ];
+  const formaTapa = poligonoRedondo(tapaCarter, 4);
+  for (const s of [1, -1]) {
+    const g = extruir(formaTapa, 0.008, 0.0025, q, 16, 2);
+    g.translate(0, 0, s * 0.160);
+    l.add('suspendida', 'motor', 'fundicion', g);
+    const pts = formaTapa.getSpacedPoints(14);
+    for (let k = 0; k < 14; k++) {
+      const p = pts[k];
+      const hacia = new THREE.Vector2(0.03, 0.38).sub(p).normalize().multiplyScalar(0.008);
+      tornillos.push(matTornillo(new THREE.Vector3(p.x + hacia.x, p.y + hacia.y, s * 0.1638), new THREE.Vector3(0, 0, s), k));
+    }
+  }
+  // Tapas laterales Ø 0,16 (alternador a la izquierda, embrague a la derecha) y tornillería.
   const centroTapa = new THREE.Vector3(0.03, 0.375, 0);
   for (const s of [1, -1]) {
     // Cuerpo de fundición abombado y aro exterior de aluminio pulido: el filo es lo que brilla.
     const tapa = torno(redondear([
       [0.0, 0.004, 0], [0.066, 0.004, 0.006], [0.058, 0.018, 0.012], [0.03, 0.023, 0.02], [0.0, 0.024, 0],
-    ], 4), seg(q, 56, 18));
-    l.add('suspendida', 'motor', 'fundicion', orientar(tapa, centroTapa.clone().setZ(s * 0.154), [0, 0, s]));
+    ], 3), seg(q, 44, 16));
+    l.add('suspendida', 'motor', 'fundicion', orientar(tapa, centroTapa.clone().setZ(s * 0.162), [0, 0, s]));
     const aro = torno(redondear([
       [0.064, 0.0, 0], [0.084, 0.0, 0.003], [0.084, 0.009, 0.004], [0.075, 0.013, 0.004], [0.064, 0.012, 0],
-    ], 3), seg(q, 56, 18));
-    l.add('suspendida', 'motor', 'aluminio', orientar(aro, centroTapa.clone().setZ(s * 0.154), [0, 0, s]));
+    ], 2), seg(q, 48, 16));
+    l.add('suspendida', 'motor', 'diamantado', orientar(aro, centroTapa.clone().setZ(s * 0.162), [0, 0, s]));
     for (let k = 0; k < 7; k++) {
       const a = (k / 7) * Math.PI * 2 + 0.2;
-      const p = centroTapa.clone().add(new THREE.Vector3(Math.cos(a) * 0.074, Math.sin(a) * 0.074, s * 0.1665));
+      const p = centroTapa.clone().add(new THREE.Vector3(Math.cos(a) * 0.074, Math.sin(a) * 0.074, s * 0.1745));
       tornillos.push(matTornillo(p, new THREE.Vector3(0, 0, s), k));
     }
   }
   // Tapa del piñón (izquierda), por donde sale la cadena.
   const tapaPinon = torno(redondear([[0.0, 0.0, 0], [0.05, 0.0, 0.004], [0.05, 0.012, 0.006], [0.0, 0.014, 0]], 3), seg(q, 36, 12));
-  l.add('suspendida', 'motor', 'fundicion', orientar(tapaPinon, [-0.10, 0.34, 0.152], [0, 0, 1]));
+  l.add('suspendida', 'motor', 'fundicion', orientar(tapaPinon, [-0.10, 0.34, 0.16], [0, 0, 1]));
 
   // Cilindros: camisa en torno y aletas instanciadas (11 por cilindro, cada 0,016).
   const aletas: THREE.Matrix4[] = [];
@@ -71,7 +89,7 @@ export function motor(q: Calidad, l: Lote): void {
       aletas.push(new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -INCL), new THREE.Vector3(e, 1, e)));
     }
   }
-  const aleta = cajaR(0.13, 0.004, 0.11, 0.0018, [0, 0, 0], q, 2);
+  const aleta = cajaChaflan(0.13, 0.004, 0.11, 0.0015);
   l.instancias('aletas', 'suspendida', 'motor', 'fundicion', aleta, aletas);
 
   // Culata común con tres aletas propias, y tapa de balancines de aluminio.
@@ -92,11 +110,11 @@ export function motor(q: Calidad, l: Lote): void {
     const carbu = torno(redondear([
       [0.0, -0.005, 0], [0.02, -0.005, 0.003], [0.02, 0.012, 0.003], [0.025, 0.016, 0.004], [0.025, 0.05, 0.006],
       [0.02, 0.056, 0.003], [0.02, 0.07, 0], [0.0, 0.07, 0],
-    ], 3), seg(q, 28, 10));
+    ], 2), seg(q, 20, 10));
     l.add('suspendida', 'motor', 'aluminio', orientar(carbu, toma, dir));
     const filtro = torno(redondear([
       [0.0, 0.066, 0], [0.021, 0.066, 0.003], [0.028, 0.075, 0.004], [0.028, 0.118, 0.008], [0.0, 0.12, 0],
-    ], 4), seg(q, 28, 10));
+    ], 2), seg(q, 20, 10));
     l.add('suspendida', 'motor', 'anodizado', orientar(filtro, toma, dir));
   }
 

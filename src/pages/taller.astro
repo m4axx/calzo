@@ -27,7 +27,7 @@
       import { crearEntorno } from '../three/entorno.ts';
       import { crearMotoMaqueta } from '../three/maqueta.ts';
       import { texturaGPU } from '../three/gpu-textura.ts';
-      import { PLATAFORMA_ARRIBA, type MotoRig, type PiezaId, type Tier } from '../three/contrato-tipos.ts';
+      import { ANCLAS, ANCLAS_SUSPENDIDAS, APOYO_HUELLA, PIEZA_NUM, PLATAFORMA_ARRIBA, anguloHorquilla, type AnclaId, type MotoRig, type PiezaId, type Tier } from '../three/contrato-tipos.ts';
 
       type V = [number, number, number];
       (async () => {
@@ -57,6 +57,8 @@
         'taller.motor': { pos: [1.0, 0.55, 1.3], mira: [0.05, 0.45, 0.0], fov: 22 },
         'taller.manillar': { pos: [0.9, 1.35, 0.5], mira: [0.42, 0.97, 0.0], fov: 26 },
         'taller.deposito': { pos: [0.6, 1.9, 1.1], mira: [0.12, 0.9, 0.0], fov: 22 },
+        'taller.pipa': { pos: [0.40, 0.95, 1.0], mira: [0.40, 0.84, 0.0], fov: 24 },
+        'taller.bajo': { pos: [0.2, 0.25, 1.6], mira: [0.0, 0.32, 0.0], fov: 26 },
       };
 
       const qs = new URLSearchParams(location.search);
@@ -180,6 +182,54 @@
       if (ancla && ancla in rig.anclas) rig.anclas[ancla as keyof typeof rig.anclas].getWorldPosition(spot.target.position);
       else spot.target.position.set(0, apoyo + 0.4, 0);
 
+      // Verificación del contrato (§4.3): anclas en su cota, las suspendidas dentro del grupo,
+      // setHorquilla gira lo pedido, aPieza presente en todas las mallas y setFoco solo toca uniforms.
+      function verificar(r: MotoRig) {
+        const errores: string[] = [];
+        const y0 = r.root.position.y, h0 = num('horquilla', 0);
+        r.setApoyo(0); r.setHorquilla(0); r.root.updateMatrixWorld(true);
+        const v = new THREE.Vector3();
+        let maxErr = 0;
+        for (const id of Object.keys(ANCLAS) as AnclaId[]) {
+          const a = r.anclas[id];
+          if (!a) { errores.push('falta ' + id); continue; }
+          a.getWorldPosition(v);
+          const [x, y, z] = ANCLAS[id];
+          const e = Math.hypot(v.x - x, v.y + APOYO_HUELLA - y, v.z - z);
+          maxErr = Math.max(maxErr, e);
+          let dentro = false;
+          for (let o: THREE.Object3D | null = a; o; o = o.parent) if (o === r.grupos.suspendida) dentro = true;
+          if (ANCLAS_SUSPENDIDAS.has(id) !== dentro) errores.push(id + ' en grupo equivocado');
+        }
+        if (r.grupos.suspendida.parent !== r.anclas.pivote_suspension) errores.push('suspendida no cuelga del pivote');
+        const antes = r.anclas.hs_tija.getWorldPosition(new THREE.Vector3());
+        r.setHorquilla(1); r.root.updateMatrixWorld(true);
+        const despues = r.anclas.hs_tija.getWorldPosition(new THREE.Vector3());
+        const giro = -r.anclas.pivote_suspension.rotation.z;
+        if (Math.abs(giro - anguloHorquilla(1)) > 1e-9) errores.push('ángulo de horquilla');
+        const sinPieza: string[] = [];
+        const piezas = new Set<number>();
+        r.root.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh) return;
+          const a = m.geometry.getAttribute('aPieza');
+          if (!a) sinPieza.push(m.name); else for (let i = 0; i < a.count; i += 97) piezas.add(a.getX(i));
+        });
+        const uAntes = U.uFoco.value;
+        r.setFoco('rueda_del', 0.5);
+        const focoOK = U.uFoco.value === PIEZA_NUM.rueda_del && Math.abs(U.uAtenuacion.value - 0.575) < 1e-9;
+        r.setFoco(null, 0);
+        U.uFoco.value = uAntes;
+        r.setApoyo(y0 + APOYO_HUELLA); r.setHorquilla(h0); r.root.updateMatrixWorld(true);
+        return {
+          errores, maxErrAnclaMm: Math.round(maxErr * 1e4) / 10, desplTijaHorquilla1Mm: Math.round(antes.distanceTo(despues) * 1e4) / 10,
+          sinPieza, piezas: [...piezas].sort(), focoOK, grupos: Object.keys(r.grupos),
+        };
+      }
+      const contrato = verificar(rig);
+      if (qs.has('foco')) rig.setFoco(qs.get('foco') as PiezaId, num('mezcla', 1));
+      rig.root.updateMatrixWorld(true);
+
       const tc = performance.now();
       await renderer.compileAsync(escena, cam);
       const tCompilar = performance.now() - tc;
@@ -190,7 +240,7 @@
       rig.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) callsMoto++; });
       (window as any).__taller = {
         listo: true, plano: idPlano, tier, construccionMs: Math.round(tConstruccion), compilarMs: Math.round(tCompilar),
-        medidas: rig.root.userData.medidas, info, callsMoto, caja: [rig.caja.min.toArray(), rig.caja.max.toArray()],
+        medidas: rig.root.userData.medidas, info, callsMoto, contrato, caja: [rig.caja.min.toArray(), rig.caja.max.toArray()],
       };
       document.title = 'listo';
 

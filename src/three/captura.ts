@@ -27,7 +27,7 @@ export function rtComoCanvas(w: number, h: number, muestras = 4): THREE.WebGLRen
 
 const dosCifras = (n: number) => String(n).padStart(2, '0');
 
-async function sellar(ctx: CanvasRenderingContext2D, w: number, h: number, s: Sello): Promise<void> {
+async function sellar(ctx: CanvasRenderingContext2D, h: number, s: Sello): Promise<void> {
   const tam = Math.max(10, Math.round(h * 0.036));
   const familia = `"Overpass Mono Variable", "OM Consolas", "OM Menlo", monospace`;
   try { await document.fonts.load(`500 ${tam}px "Overpass Mono Variable"`); } catch { /* respaldo */ }
@@ -55,7 +55,6 @@ export function crearCapturador(o: {
 }): Capturador {
   const promesas = new Map<PresetId, Promise<string>>();
   const cola: Pedido[] = [];
-  const urls: string[] = [];
 
   async function terminar(rt: THREE.WebGLRenderTarget, p: Pedido): Promise<void> {
     const { w, h } = p;
@@ -74,11 +73,10 @@ export function crearCapturador(o: {
     const fila = w * 4;
     for (let y = 0; y < h; y++) img.data.set(buf.subarray((h - 1 - y) * fila, (h - y) * fila), y * fila);
     ctx.putImageData(img, 0, 0);
-    if (p.sello) await sellar(ctx, w, h, p.sello);
+    if (p.sello) await sellar(ctx, h, p.sello);
     const blob = await new Promise<Blob | null>((r) => lienzo.toBlob(r, 'image/jpeg', 0.85));
     if (!blob) throw new Error('[calzo] captura: toBlob sin resultado');
     const url = URL.createObjectURL(blob);
-    urls.push(url);
     estado.capturas[p.preset] = url;
     emit('captura', { preset: p.preset, url });
     p.ok(url);
