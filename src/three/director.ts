@@ -462,7 +462,9 @@ export function crearDirector(ctx: {
       else camara.clearViewOffset();
       camara.updateProjectionMatrix();
       camara.updateMatrixWorld(true);
-      forzar = true;
+      // El canvas visible no se ha tocado (la captura va a un RT): no hace falta
+      // repintarlo. Solo el mapa de sombras guarda el estado del preset.
+      if (ctx.renderer?.shadowMap.enabled && !sombrasCongeladas) ctx.renderer.shadowMap.needsUpdate = true;
     };
   }
 
@@ -498,6 +500,7 @@ export function crearDirector(ctx: {
     forzar(): void { forzar = true; },
     iniciarIntro(): void { introT0 = ahora(); forzar = true; },
     congelarSombras(v: boolean): void { sombrasCongeladas = v; },
+    sombrasCongeladas: (): boolean => sombrasCongeladas,
     estadoActual: (): EstadoEscena => ultimo,
     aplicarEstado,
   };

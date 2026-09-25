@@ -76,7 +76,7 @@ export function manillar(q: Calidad, l: Lote): void {
     // Maneta: sale del soporte hacia fuera, por delante del puño.
     const man = extruir(formaManeta(), 0.007, 0.0015, q, 20, 2);
     // Base de la maneta: X a lo largo del puño (algo abierta hacia delante), Y hacia delante, Z el grosor.
-    const L = dir.clone().add(new THREE.Vector3(0.1, -0.02, 0)).normalize();
+    const L = dir.clone().add(new THREE.Vector3(0.035, -0.02, 0)).normalize();
     const F = new THREE.Vector3(1, 0, 0).addScaledVector(L, -L.x).normalize();
     const U3 = new THREE.Vector3().crossVectors(L, F);
     man.applyMatrix4(new THREE.Matrix4().makeBasis(L, F, U3).setPosition(ps.x + 0.03, ps.y - 0.008, ps.z));
@@ -89,14 +89,26 @@ export function manillar(q: Calidad, l: Lote): void {
   const cuerpoR = torno(redondear([
     [0.0, -0.035, 0], [0.034, -0.035, 0.012], [0.052, -0.012, 0.01], [0.055, 0.0, 0.003], [0.049, 0.004, 0],
   ], 4), seg(q, 48, 16));
-  l.add('suspendida', 'mandos', 'pintura', orientar(cuerpoR, c, eje));
+  l.add('suspendida', 'mandos', 'cromo', orientar(cuerpoR, c, eje));
   const bisel = torno(redondear([
     [0.0485, 0.002, 0], [0.0555, 0.0, 0.0015], [0.0565, 0.006, 0.002], [0.051, 0.009, 0.0015], [0.046, 0.007, 0],
   ], 2), seg(q, 48, 16));
   l.add('suspendida', 'mandos', 'cromo', orientar(bisel, c, eje));
-  const cristal = torno(redondear([[0.047, 0.004, 0], [0.03, 0.0065, 0], [0.0, 0.0075, 0]], 2), seg(q, 48, 16));
-  l.add('suspendida', 'mandos', 'faro_lente', orientar(cristal, c, eje));
+  // Esfera: fondo oscuro, anillo de graduación torneado y aguja. Sin cristal opaco encima.
+  const esfera = torno([new THREE.Vector2(0.048, 0.001), new THREE.Vector2(0.0, 0.001)], seg(q, 48, 16));
+  l.add('suspendida', 'mandos', 'anodizado', orientar(esfera, c, eje));
+  const grad = torno(redondear([[0.036, 0.0012, 0], [0.036, 0.0016, 0.0002], [0.041, 0.0016, 0.0002], [0.041, 0.0012, 0]].reverse() as [number, number, number][], 1), seg(q, 48, 16));
+  l.add('suspendida', 'mandos', 'diamantado', orientar(grad, c, eje));
+  const aguja = cajaR(0.034, 0.0022, 0.0035, 0.0008, [0, 0, 0], q, 1);
+  aguja.translate(0.012, 0.0028, 0);
+  aguja.rotateY(0.9);
+  // La aguja se hace en el plano XZ local del torno (+Y = eje del reloj).
+  const qA = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), eje);
+  aguja.applyQuaternion(qA).translate(c.x, c.y, c.z);
+  l.add('suspendida', 'mandos', 'cromo', aguja);
+  const eje0 = torno(redondear([[0.0, 0.0, 0], [0.004, 0.0, 0.001], [0.004, 0.004, 0.001], [0.0, 0.0045, 0]], 1), 12);
+  l.add('suspendida', 'mandos', 'cromo', orientar(eje0, c, eje));
   // Soporte del reloj a la tija superior.
-  const soporte = tubo(rutaCodos([c.clone().addScaledVector(eje, -0.03), [0.45, 0.935, 0]], 0.01), 0.008, q, { radial: 12 });
+  const soporte = tubo(rutaCodos([c.clone().addScaledVector(eje, -0.03), [0.447, 0.97, 0]], 0.01), 0.008, q, { radial: 12 });
   l.add('suspendida', 'mandos', 'anodizado', soporte);
 }

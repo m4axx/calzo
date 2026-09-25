@@ -9,7 +9,7 @@ import { R_BARRA, Z_HORQ } from './horquilla.ts';
 export function faro(q: Calidad, l: Lote): void {
   const c = new THREE.Vector3(0.60, 0.88, 0);
   const eje = new THREE.Vector3(1, -0.04, 0).normalize();
-  const segs = seg(q, 64, 20);
+  const segs = seg(q, 56, 20);
   // Carcasa: del culo redondeado (y = −0,09) a la boca (y = 0,03), radio 0,09.
   const carcasa = torno(redondear([
     [0.0, -0.092, 0], [0.05, -0.088, 0.03], [0.086, -0.03, 0.03], [0.09, 0.02, 0.004], [0.0855, 0.026, 0],

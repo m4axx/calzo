@@ -20,19 +20,18 @@ const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
         <img class="pieza__quieto" data-preset="quieto.pieza" alt="La moto de pie sobre su plataforma, en la sala a oscuras" width="1600" height="900" />
       </figure>
       <h1 id="pieza-h" class="h1 pieza__h1">
-        <span class="h1__lema">Se sube atado. Se baja igual.</span>
+        <span class="h1__lema"><span class="pieza__frase-h">Se sube atado.</span> <span class="pieza__frase-h">Se baja igual.</span></span>
         <span class="h1__servicio">Transporte de motos, quads y embarcaciones por carretera, desde Madrid a toda España.</span>
       </h1>
       <div class="pieza__frase">
         <p class="pieza__precio">
           <span data-precio="articulo">{r.articulo}</span> de Madrid a
-          <label class="sr" for="destino-heroe">Destino</label>
-          <span class="pieza__select">
-            <select id="destino-heroe" data-destino-select data-fase-p="0">
+          <span class="pieza__nw"><span class="pieza__select">
+            <select id="destino-heroe" aria-label="Destino" data-destino-select data-fase-p="0">
               {DESTINOS.map((d) => <option value={d.id} selected={d.id === 'valencia'}>{d.nombre}</option>)}
             </select>
             <Chevron class="pieza__chevron" />
-          </span>: <span class="pieza__total" data-precio="total">{r.totalTxt}</span>
+          </span>:</span> <span class="pieza__total" data-precio="total">{r.totalTxt}</span>
         </p>
         <p class="pieza__pie">
           <span class="nota">Tarifa provisional</span>
@@ -53,19 +52,25 @@ const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
     max-width: var(--contenedor);
     margin-inline: auto;
   }
-  .pieza__h1 { order: 1; display: grid; gap: .6em; max-width: 12ch; }
+  .pieza__h1 { order: 1; display: grid; gap: clamp(1rem, .5rem + 1.2vw, 2rem); }
+  /* Cada frase del lema va entera: el corte cae siempre tras «atado.». */
+  .pieza__frase-h { white-space: nowrap; }
+  /* Con line-height 0,9 los rasgos sobresalen de la caja de línea: se les da aire dentro de
+     la propia caja (sin mover nada) para que nada desborde su escenario (§9.2 #21). */
+  .pieza__h1 .h1__lema { padding-block: .16em; }
   .pieza__h1 .h1__servicio { max-width: 34ch; }
   .pieza__moto { order: 2; position: relative; margin: 0; }
   .pieza__frase { order: 3; }
   .pieza__suelo { display: none; }
 
-  .pieza__linea { width: 100%; height: auto; }
+  .pieza__moto :global(.pieza__linea) { width: 100%; height: auto; }
   .pieza__quieto { display: none; width: 100%; height: auto; opacity: 0; transition: opacity .2s var(--ease); }
   .pieza__quieto:global(.cargada) { opacity: 1; }
 
   .pieza__frase { display: grid; gap: .75rem; }
   .pieza__precio { font-size: var(--t-entrada); line-height: 1.4; letter-spacing: -.005em; }
   .pieza__total { font-family: var(--f-cifras); font-variant-numeric: tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
+  .pieza__nw { white-space: nowrap; }
   .pieza__select { position: relative; display: inline-block; white-space: nowrap; }
   .pieza__select select {
     appearance: none;
@@ -100,8 +105,8 @@ const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
   }
 
   /* Movimiento reducido: fotograma quieto (webgl) o MotoLinea estática (svg). */
-  :global(html.js.reducido) .pieza__linea { display: none; }
-  :global(html.js.reducido.fuente-svg) .pieza__linea { display: block; }
+  :global(html.js.reducido) .pieza__moto :global(.pieza__linea) { display: none; }
+  :global(html.js.reducido.fuente-svg) .pieza__moto :global(.pieza__linea) { display: block; }
   :global(html.js.reducido:not(.fuente-svg)) .pieza__quieto { display: block; }
   :global(html.js.reducido:not(.fuente-svg)) .pieza__moto { aspect-ratio: 16 / 9; }
 
@@ -140,8 +145,8 @@ const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
     pointer-events: none;
   }
   :global(html.js.fuente-svg:not(.reducido)) .pieza__moto { opacity: 1; }
-  :global(html.js:not(.reducido)) .pieza__linea { --ml-trazo: 1.9px; }
-  :global(html.js:not(.reducido)) .pieza__linea:global(.barre) { --ml-stroke: url(#ml-barrido); --ml-o: 1; }
+  :global(html.js:not(.reducido)) .pieza__moto :global(.pieza__linea) { --ml-trazo: 1.9px; }
+  :global(html.js:not(.reducido)) .pieza__moto :global(.pieza__linea.barre) { --ml-stroke: url(#ml-barrido); --ml-o: 1; }
 
   :global(html.js:not(.reducido)) .pieza__h1 {
     position: absolute;
@@ -164,7 +169,7 @@ const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
     top: calc(var(--suelo-y) - 48vw);
     width: 112vw;
   }
-  :global(html.js.compacto:not(.reducido)) .pieza__linea { --ml-trazo: 3px; }
+  :global(html.js.compacto:not(.reducido)) .pieza__moto :global(.pieza__linea) { --ml-trazo: 3px; }
   :global(html.js.compacto:not(.reducido)) .pieza__h1 { top: 12svh; width: var(--interior); }
   :global(html.js.compacto:not(.reducido)) .pieza__frase { top: auto; bottom: 4svh; width: var(--interior); }
   :global(html.js.compacto:not(.reducido)) .pieza__precio { font-size: var(--t-cuerpo); }

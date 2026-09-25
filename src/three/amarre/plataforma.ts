@@ -4,7 +4,7 @@
 // También crea los materiales del amarre (§4.5), que son de WP2.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { ANCLAS_PLATAFORMA, type AnclaPlataformaId, type Tier } from '../contrato-tipos.ts';
+import { ANCLAS_PLATAFORMA, type AnclaPlataformaId, type Tier, type UniformsCompartidos } from '../contrato-tipos.ts';
 import { texturaGPU } from '../gpu-textura.ts';
 
 // Chapa lagrimada: lágrimas alargadas a ±45° alternas en una rejilla. Normal
@@ -37,7 +37,24 @@ export interface MaterialesAmarre {
   dispose(): void;
 }
 
-export function crearMaterialesAmarre(renderer: THREE.WebGLRenderer, tier: Tier): MaterialesAmarre {
+/**
+ * Aislado (§4.8): en las pausas, lo que no es la pieza en foco se atenúa. La
+ * plataforma y el suelo también, para que la chapa bajo la clave no le robe la
+ * luz a la pieza. Solo uniforms: nunca recompila.
+ */
+export function inyectarAtenuacion(mat: THREE.Material, U: UniformsCompartidos | undefined, clave: string): void {
+  mat.customProgramCacheKey = () => 'calzo-' + clave;
+  if (!U) return;
+  mat.onBeforeCompile = (s) => {
+    s.uniforms.uFoco = U.uFoco;
+    s.uniforms.uAtenuacion = U.uAtenuacion;
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uFoco;\nuniform float uAtenuacion;')
+      .replace('#include <tonemapping_fragment>', 'gl_FragColor.rgb *= mix(1.0, uAtenuacion, step(0.0, uFoco));\n#include <tonemapping_fragment>');
+  };
+}
+
+export function crearMaterialesAmarre(renderer: THREE.WebGLRenderer, tier: Tier, U?: UniformsCompartidos): MaterialesAmarre {
   const lado = tier === 'alto' ? 1024 : 512;
   const lagrimado = texturaGPU(renderer, { frag: FRAG_LAGRIMADO, size: lado, espacio: 'lineal', uniforms: { uPaso: { value: 1 / lado } } });
   // 16 lágrimas por repetición y 2 repeticiones por metro: paso de ~31 mm.
@@ -47,9 +64,9 @@ export function crearMaterialesAmarre(renderer: THREE.WebGLRenderer, tier: Tier)
   const plataforma = new THREE.MeshPhysicalMaterial({
     color: '#8E9194', metalness: 1, roughness: 0.34, normalMap: lagrimado, anisotropy: 0.4,
   });
-  plataforma.customProgramCacheKey = () => 'calzo-plataforma';
+  inyectarAtenuacion(plataforma, U, 'plataforma');
   const anodizado = new THREE.MeshPhysicalMaterial({ color: '#1D1F21', metalness: 0.6, roughness: 0.42 });
-  anodizado.customProgramCacheKey = () => 'calzo-anodizado';
+  inyectarAtenuacion(anodizado, U, 'anodizado');
   // anisotropy > 0 desde la creación: nunca se anima desde 0 (recompilaría).
   const aluminio = new THREE.MeshPhysicalMaterial({ color: '#A7AAAC', metalness: 1, roughness: 0.30, anisotropy: 0.6 });
   aluminio.customProgramCacheKey = () => 'calzo-aluminio';

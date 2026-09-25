@@ -11,12 +11,15 @@ function loft(tabla: readonly Seccion[], capD: number, capT: number, expArriba: 
   const curva = new THREE.CatmullRomCurve3(tabla.map(([x, t, s]) => new THREE.Vector3(x, t, s)), false, 'catmullrom', 0.5);
   const anchos = new THREE.CatmullRomCurve3(tabla.map(([x, , , a]) => new THREE.Vector3(x, a, 0)), false, 'catmullrom', 0.5);
   const c0 = 0.08, c1 = 0.08;
+  const cache = new Map<number, [THREE.Vector3, number]>();
   return (u: number, v: number, out: THREE.Vector3) => {
     let w: number, esc: number, dx = 0;
     if (v < c0) { const th = (v / c0) * Math.PI / 2; w = 0; esc = Math.sin(th); dx = capD * Math.cos(th); }
     else if (v > 1 - c1) { const th = ((1 - v) / c1) * Math.PI / 2; w = 1; esc = Math.sin(th); dx = -capT * Math.cos(th); }
     else { w = (v - c0) / (1 - c0 - c1); esc = 1; }
-    const p = curva.getPoint(w), a = anchos.getPoint(w).y;
+    let c = cache.get(w);
+    if (!c) { c = [curva.getPoint(w), anchos.getPoint(w).y]; cache.set(w, c); }
+    const [p, a] = c;
     const techo = p.y, suelo = p.z, yc = (techo + suelo) / 2, b = (techo - suelo) / 2;
     const ang = u * Math.PI * 2;
     const [cz, sy] = superelipse(ang, Math.sin(ang) >= 0 ? expArriba : expAbajo);
@@ -34,11 +37,11 @@ export function asiento(q: Calidad, l: Lote): void {
     [-0.53, 0.853, 0.785, 0.124],
     [-0.62, 0.860, 0.792, 0.112],
   ];
-  const g = superficie(loft(tabla, 0.03, 0.03, 4.2, 5), seg(q, 72, 28), seg(q, 44, 20), { uvEscala: [4, 3] });
+  const g = superficie(loft(tabla, 0.03, 0.03, 4.2, 5), seg(q, 56, 24), seg(q, 36, 16), { uvEscala: [4, 3] });
   l.add('suspendida', 'resto', 'asiento', g);
   // Vivo de la base del asiento: una banda algo más ancha y fina, en pintura oscura.
   const base: Seccion[] = tabla.map(([x, , s, a]) => [x, s + 0.012, s - 0.004, a + 0.004] as const);
-  l.add('suspendida', 'resto', 'anodizado', superficie(loft(base, 0.024, 0.024, 6, 6), seg(q, 64, 24), seg(q, 36, 16)));
+  l.add('suspendida', 'resto', 'anodizado', superficie(loft(base, 0.024, 0.024, 6, 6), seg(q, 48, 20), seg(q, 28, 12)));
 
   // Colín: pintura, afilado hacia atrás.
   const colin: Seccion[] = [
@@ -47,7 +50,7 @@ export function asiento(q: Calidad, l: Lote): void {
     [-0.72, 0.846, 0.792, 0.084],
     [-0.795, 0.842, 0.81, 0.05],
   ];
-  l.add('suspendida', 'resto', 'pintura', superficie(loft(colin, 0.01, 0.018, 3.2, 4), seg(q, 64, 24), seg(q, 36, 16)));
+  l.add('suspendida', 'resto', 'pintura', superficie(loft(colin, 0.01, 0.018, 3.2, 4), seg(q, 48, 20), seg(q, 28, 12)));
   // Piloto: lente ahumada sin emisión bajo la punta del colín.
   l.add('suspendida', 'resto', 'faro_lente', cajaR(0.02, 0.02, 0.07, 0.008, [-0.8, 0.812, 0], q, 3));
 

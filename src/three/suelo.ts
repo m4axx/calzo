@@ -1,7 +1,8 @@
 // Suelo de la sala, junta del elevador y sombra de contacto (§4.4, §4.7).
 // «Un objeto apoyado no es un juguete; uno que flota, sí.»
 import * as THREE from 'three';
-import type { Tier } from './contrato-tipos.ts';
+import type { Tier, UniformsCompartidos } from './contrato-tipos.ts';
+import { inyectarAtenuacion } from './amarre/plataforma.ts';
 import { texturaGPU } from './gpu-textura.ts';
 
 /** Hueco de la junta: 12 mm mayor que la plataforma (2,60 × 0,90) por cada lado. */
@@ -30,7 +31,7 @@ void main() {
   gl_FragColor = vec4(vec3(1.0 - k), 1.0);
 }`;
 
-export function crearSuelo(renderer: THREE.WebGLRenderer, tier: Tier): { suelo: THREE.Mesh; sombra: THREE.Mesh; dispose(): void } {
+export function crearSuelo(renderer: THREE.WebGLRenderer, tier: Tier, U?: UniformsCompartidos): { suelo: THREE.Mesh; sombra: THREE.Mesh; dispose(): void } {
   const lado = tier === 'alto' ? 1024 : 512;
 
   // Círculo de radio 8 con el hueco rectangular de la junta.
@@ -55,7 +56,7 @@ export function crearSuelo(renderer: THREE.WebGLRenderer, tier: Tier): { suelo: 
     color: '#0B0D0E', roughness: 0.32, metalness: 0,
     alphaMap: alfa, transparent: true, dithering: true, depthWrite: false,
   });
-  mat.customProgramCacheKey = () => 'calzo-suelo';
+  inyectarAtenuacion(mat, U, 'suelo');
   const suelo = new THREE.Mesh(geo, mat);
   suelo.name = 'suelo';
   suelo.receiveShadow = true;

@@ -109,9 +109,9 @@ export async function crearEscena(o: { contenedor: HTMLElement; tier: Tier; prog
   const escena = new THREE.Scene();
   escena.environment = crearEntorno(renderer, tier);
   escena.environmentIntensity = 0.15;
-  const mats = crearMaterialesAmarre(renderer, tier);
+  const mats = crearMaterialesAmarre(renderer, tier, U);
   const tejido = texturaGPU(renderer, { frag: FRAG_TEJIDO, size: 128, espacio: 'lineal' });
-  const suelo = crearSuelo(renderer, tier);
+  const suelo = crearSuelo(renderer, tier, U);
   prog('texturas', 1);
   await cede();
 
@@ -165,7 +165,11 @@ export async function crearEscena(o: { contenedor: HTMLElement; tier: Tier; prog
   async function compilarTodo(): Promise<void> {
     const ocultos: THREE.Object3D[] = [];
     escena.traverse((ob) => { if (!ob.visible) { ocultos.push(ob); ob.visible = true; } });
-    try { await renderer.compileAsync(escena, camara); } finally { for (const ob of ocultos) ob.visible = false; }
+    try {
+      // Sin KHR_parallel_shader_compile, compileAsync compila igual en síncrono y avisa por consola.
+      if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(escena, camara);
+      else { renderer.compile(escena, camara); await cede(); }
+    } finally { for (const ob of ocultos) ob.visible = false; }
   }
   await compilarTodo();
   prog('shaders', 1);
@@ -312,7 +316,7 @@ export async function crearEscena(o: { contenedor: HTMLElement; tier: Tier; prog
   const capturador = crearCapturador({
     renderer, escena, camara,
     aplicarPreset: (p, w, h) => director.aplicarPreset(p, w, h),
-    antesDeRender: () => { if (renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true; },
+    antesDeRender: () => { if (renderer.shadowMap.enabled && !director.sombrasCongeladas()) renderer.shadowMap.needsUpdate = true; },
   });
 
   function cinchasCenitales(w: number, h: number): [Cincha2D, Cincha2D, Cincha2D, Cincha2D] {

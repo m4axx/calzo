@@ -11,12 +11,15 @@ function anillo(rExt: number, rInt: number, agujeros: { r: number; n: number; d:
   const h = new THREE.Path();
   h.absarc(0, 0, rInt, 0, Math.PI * 2, true);
   s.holes.push(h);
+  // Taladros como polígonos de 12 lados: con absarc cada taladro tomaría los
+  // curveSegments del anillo y la triangulación se dispara (y la tarea pasa de 50 ms).
   for (const a of agujeros) {
     for (let k = 0; k < a.n; k++) {
       const ang = (k / a.n) * Math.PI * 2 + (a.fase ?? 0);
-      const p = new THREE.Path();
-      p.absarc(a.r * Math.cos(ang), a.r * Math.sin(ang), a.d / 2, 0, Math.PI * 2, true);
-      s.holes.push(p);
+      const cx = a.r * Math.cos(ang), cy = a.r * Math.sin(ang);
+      const pts: THREE.Vector2[] = [];
+      for (let i = 10; i > 0; i--) { const t = (i / 10) * Math.PI * 2; pts.push(new THREE.Vector2(cx + Math.cos(t) * a.d / 2, cy + Math.sin(t) * a.d / 2)); }
+      s.holes.push(new THREE.Path(pts));
     }
   }
   return s;
@@ -34,8 +37,8 @@ function arana(rExt: number, rInt: number): THREE.Shape {
     const a = (k / 5) * Math.PI * 2 + 0.3 + Math.PI / 5;
     const p = new THREE.Path();
     const pts: THREE.Vector2[] = [];
-    for (let i = 0; i <= 12; i++) {
-      const t = (i / 12) * Math.PI * 2;
+    for (let i = 0; i < 24; i++) {
+      const t = (i / 24) * Math.PI * 2;
       const rr = rm + Math.cos(t) * ancho;
       const aa = a + Math.sin(t) * 0.36;
       pts.push(new THREE.Vector2(rr * Math.cos(aa), rr * Math.sin(aa)));
@@ -48,10 +51,10 @@ function arana(rExt: number, rInt: number): THREE.Shape {
 
 function disco(q: Calidad, l: Lote, x: number, z: number, rExt: number, grupo: Grupo, pieza: PiezaId): void {
   const rInt = rExt * 0.72;
-  const pista = extruir(anillo(rExt, rInt, [{ r: (rExt + rInt) / 2, n: 18, d: 0.0075 }]), 0.005, 0.0006, q, 64, 1);
+  const pista = extruir(anillo(rExt, rInt, [{ r: (rExt + rInt) / 2, n: 18, d: 0.0075 }]), 0.005, 0.0006, q, 56, 1);
   pista.translate(x, 0.31, z);
   l.add(grupo, pieza, 'metal_disco', pista);
-  const ar = extruir(arana(rInt + 0.004, 0.05), 0.004, 0.0008, q, 48, 1);
+  const ar = extruir(arana(rInt + 0.004, 0.05), 0.004, 0.0008, q, 40, 1);
   ar.translate(x, 0.31, z + Math.sign(z) * 0.0015);
   l.add(grupo, pieza, 'aluminio', ar);
   // Botones flotantes entre pista y araña.
@@ -88,12 +91,15 @@ function pinza(q: Calidad, l: Lote, x: number, z: number, rDisco: number, grupo:
   l.add(grupo, pieza, 'anodizado', brazo);
 }
 
-export function discos(q: Calidad, l: Lote): void {
+export function discosDel(q: Calidad, l: Lote): void {
   for (const z of [0.07, -0.07]) {
     disco(q, l, 0.725, z, 0.16, 'delantera', 'rueda_del');
     // Anclaje de la pinza delantera: la base de la botella, algo por encima del eje.
     pinza(q, l, 0.725, z, 0.16, 'delantera', 'rueda_del', new THREE.Vector3(0.70, 0.36, z));
   }
+}
+
+export function discoTras(q: Calidad, l: Lote): void {
   disco(q, l, -0.725, -0.06, 0.12, 'trasera', 'resto');
   pinza(q, l, -0.725, -0.06, 0.12, 'trasera', 'resto', new THREE.Vector3(-0.64, 0.30, -0.06));
 }

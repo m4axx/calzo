@@ -24,7 +24,7 @@ function perfilLlanta(b: number): THREE.Vector2[] {
     [0.190, b + e, 0.004],
     [0.186, b + e - 0.004, 0.003],
     [0.186, -b - e + 0.004, 0],
-  ], 3);
+  ], 2);
 }
 
 /** Radio doble en V: dos brazos que nacen juntos en el buje y se abren hacia el aro. */
@@ -55,7 +55,7 @@ function formaRadio(): THREE.Shape {
 
 export function llanta(q: Calidad, l: Lote, x: number, b: number, anchoBuje: number, grupo: Grupo, pieza: PiezaId): void {
   const c = new THREE.Vector3(x, 0.31, 0);
-  const segs = seg(q, 96, 24);
+  const segs = seg(q, 72, 24);
   // Aro.
   l.add(grupo, pieza, 'anodizado', orientar(torno(perfilLlanta(b), segs), c, [0, 0, 1]));
   // Labio diamantado: la cara lateral torneada del aro, un anillo apenas saliente.
@@ -82,10 +82,5 @@ export function llanta(q: Calidad, l: Lote, x: number, b: number, anchoBuje: num
     [0.062, -h + 0.02, 0.006], [0.062, h - 0.02, 0.006], [0.030, h - 0.012, 0.004], [0.030, h, 0.003],
     [0.022, h + 0.004, 0.003], [0.0, h + 0.004, 0],
   ], 3);
-  l.add(grupo, pieza, 'anodizado', orientar(torno(buje, seg(q, 40, 12)), c, [0, 0, 1]));
-}
-
-export function llantas(q: Calidad, l: Lote): void {
-  llanta(q, l, 0.725, 0.046, 0.13, 'delantera', 'rueda_del');
-  llanta(q, l, -0.725, 0.066, 0.17, 'trasera', 'resto');
+  l.add(grupo, pieza, 'anodizado', orientar(torno(buje, seg(q, 32, 12)), c, [0, 0, 1]));
 }

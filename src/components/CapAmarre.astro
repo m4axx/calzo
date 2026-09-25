@@ -67,7 +67,9 @@ import MotoPlanta from './svg/MotoPlanta.astro';
     margin-inline: auto;
   }
   .amarre__svg { display: none; }
-  .amarre__titulo { margin-bottom: var(--e-3); max-width: 14ch; }
+  /* Aire para los rasgos que sobresalen de las líneas apretadas de los titulares (§9.2 #21). */
+  .amarre :global(.h2), .amarre :global(.h3), .amarre__listo { padding-block: .16em; }
+  .amarre__titulo { margin-bottom: var(--e-3); }
   .amarre__pasos { display: grid; gap: var(--e-3); }
   .amarre__paso { display: grid; gap: var(--e-1); align-items: center; }
   .amarre__texto { display: grid; gap: 1rem; align-content: start; }
@@ -139,7 +141,7 @@ import MotoPlanta from './svg/MotoPlanta.astro';
   :global(html.js.compacto:not(.reducido)) .amarre__paso { top: 12svh; width: var(--interior); }
   :global(html.js.compacto:not(.reducido)) .amarre__svg :global(.amarre__alzado) {
     left: calc(50vw - 56vw);
-    top: calc(84svh - 710 * .08vw);
+    top: calc(74svh - 710 * .08vw);
     width: 112vw;
     --ml-trazo: 3.4px;
   }

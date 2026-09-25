@@ -20,7 +20,7 @@ export function enCilindro(a: number, p = 0, z = 0): THREE.Vector3 {
 
 /** Caja redondeada alineada con el cilindro. */
 function cajaCil(w: number, h: number, d: number, r: number, a: number, p: number, z: number, q: Calidad): THREE.BufferGeometry {
-  const g = cajaR(w, h, d, r, [0, 0, 0], q, 3);
+  const g = cajaR(w, h, d, r, [0, 0, 0], q, 2);
   g.rotateZ(-INCL);
   const c = enCilindro(a, p, z);
   g.translate(c.x, c.y, c.z);
@@ -40,10 +40,15 @@ export function motor(q: Calidad, l: Lote): void {
   const tornillos: THREE.Matrix4[] = [];
   const centroTapa = new THREE.Vector3(0.03, 0.375, 0);
   for (const s of [1, -1]) {
+    // Cuerpo de fundición abombado y aro exterior de aluminio pulido: el filo es lo que brilla.
     const tapa = torno(redondear([
-      [0.0, 0.0, 0], [0.084, 0.0, 0.004], [0.084, 0.01, 0.006], [0.074, 0.02, 0.012], [0.03, 0.024, 0.02], [0.0, 0.024, 0],
+      [0.0, 0.004, 0], [0.066, 0.004, 0.006], [0.058, 0.018, 0.012], [0.03, 0.023, 0.02], [0.0, 0.024, 0],
     ], 4), seg(q, 56, 18));
-    l.add('suspendida', 'motor', 'aluminio', orientar(tapa, centroTapa.clone().setZ(s * 0.154), [0, 0, s]));
+    l.add('suspendida', 'motor', 'fundicion', orientar(tapa, centroTapa.clone().setZ(s * 0.154), [0, 0, s]));
+    const aro = torno(redondear([
+      [0.064, 0.0, 0], [0.084, 0.0, 0.003], [0.084, 0.009, 0.004], [0.075, 0.013, 0.004], [0.064, 0.012, 0],
+    ], 3), seg(q, 56, 18));
+    l.add('suspendida', 'motor', 'aluminio', orientar(aro, centroTapa.clone().setZ(s * 0.154), [0, 0, s]));
     for (let k = 0; k < 7; k++) {
       const a = (k / 7) * Math.PI * 2 + 0.2;
       const p = centroTapa.clone().add(new THREE.Vector3(Math.cos(a) * 0.074, Math.sin(a) * 0.074, s * 0.1665));

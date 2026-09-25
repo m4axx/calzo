@@ -29,7 +29,7 @@ export function amortiguadores(q: Calidad, l: Lote): void {
     }
     // Muelle: 9 espiras entre platillos.
     const h0 = a.clone().addScaledVector(eje, 0.075), h1 = a.clone().addScaledVector(eje, L - 0.088);
-    const muelle = tubo(new Helice(h0, h1, 0.0295, 9), 0.0045, q, { radial: 10, pasos: 170, tapas: true });
+    const muelle = tubo(new Helice(h0, h1, 0.0295, 9), 0.0045, q, { radial: 8, pasos: 126, tapas: true });
     l.add('suspendida', 'resto', 'cromo', muelle);
     // Ojos de anclaje (eje en z) arriba y abajo.
     for (const p of [a.clone().addScaledVector(eje, 0.004), b.clone().addScaledVector(eje, -0.006)]) {

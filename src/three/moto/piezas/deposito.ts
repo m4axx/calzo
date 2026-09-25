@@ -28,6 +28,13 @@ export function seccionDeposito(w: number): { x: number; a: number; techo: numbe
 
 export function deposito(q: Calidad, l: Lote): void {
   const capF = 0.032, capT = 0.045, c0 = 0.07, c1 = 0.08;
+  // Caché por v: la sección solo depende de v y superficie() evalúa cada anillo muchas veces.
+  const cache = new Map<number, { x: number; a: number; techo: number; suelo: number }>();
+  const secc = (w: number) => {
+    let c = cache.get(w);
+    if (!c) { c = seccionDeposito(w); cache.set(w, c); }
+    return c;
+  };
   const f = (u: number, v: number, out: THREE.Vector3) => {
     let w: number, esc: number, dx = 0;
     if (v < c0) {
@@ -39,7 +46,7 @@ export function deposito(q: Calidad, l: Lote): void {
     } else {
       w = (v - c0) / (1 - c0 - c1); esc = 1;
     }
-    const sc = seccionDeposito(w);
+    const sc = secc(w);
     const yc = sc.suelo + 0.52 * (sc.techo - sc.suelo);
     const ang = u * Math.PI * 2;
     const arriba = Math.sin(ang) >= 0;
@@ -48,7 +55,7 @@ export function deposito(q: Calidad, l: Lote): void {
     // Las tapas se cierran hacia la línea media alta: la gota «mira» hacia arriba.
     out.set(sc.x + dx, yc + b * sy * esc + (1 - esc) * (sc.techo - yc) * 0.25, sc.a * cz * esc);
   };
-  const g = superficie(f, seg(q, 112, 40), seg(q, 64, 28), { uvEscala: [3, 2] });
+  const g = superficie(f, seg(q, 96, 40), seg(q, 56, 24), { uvEscala: [10, 7] });
   l.add('suspendida', 'deposito', 'pintura', g);
 
   // Tapón de llenado en (0,18; techo): aro cromado y tapa de aluminio con bisagra.

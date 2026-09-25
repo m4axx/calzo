@@ -1,11 +1,96 @@
 ---
-// STUB de WP0 — lo completa WP3 (§2.8).
+// 08 · Se baja igual #contacto (§2.8). Dueño: WP3. El JS vive en capitulos/cierre.ts.
+// La pista solo lleva la rima visual (la moto atada que se desata) y la frase; el CTA
+// (ContactoCta, WP4) va en flujo DESPUÉS de la pista, así nunca hay un enfocable invisible.
+import MotoLinea from './svg/MotoLinea.astro';
 ---
-<section id="contacto" class="cap cap--fija" data-cap="contacto" aria-labelledby="contacto-h">
+<section id="contacto" class="cap cap--fija cierre" data-cap="contacto" aria-labelledby="contacto-h">
   <div class="cap__pista" style="--fija-d: 50; --fija-m: 40">
     <div class="cap__escenario">
+      <figure class="cierre__moto" aria-hidden="true">
+        <MotoLinea class="cierre__linea" viewBox="0 -110 1400 750" plataformaY={0.35} conCalzo cinchas horquilla={1} etiqueta="" />
+      </figure>
+      <figure class="cierre__quieto">
+        <img data-preset="quieto.cierre" alt="La moto ya desatada, sobre la plataforma de nuevo a ras de suelo" width="1600" height="900" />
+        <MotoLinea class="cierre__estatica" viewBox="0 -110 1400 750" etiqueta="La moto ya desatada, sobre la plataforma de nuevo a ras de suelo" />
+      </figure>
       <h2 id="contacto-h" class="cierre__frase">Se baja igual.</h2>
     </div>
   </div>
   <slot name="cta" />
 </section>
+
+<style>
+  /* ——— base (sin JS o con movimiento reducido): en flujo ——— */
+  .cierre .cap__escenario {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--e-2);
+    padding: var(--e-4) var(--margin) var(--e-2);
+    max-width: var(--contenedor);
+    margin-inline: auto;
+  }
+  .cierre__frase {
+    order: 1;
+    font-family: var(--f-cierre);
+    font-style: italic;
+    font-weight: 300;
+    font-size: var(--t-cierre);
+    line-height: .95;
+    letter-spacing: -.02em;
+    white-space: nowrap;
+    padding-block: .16em;
+  }
+  .cierre__moto { display: none; margin: 0; }
+  .cierre__quieto { order: 2; margin: 0; }
+  .cierre__quieto img { display: none; width: 100%; height: auto; opacity: 0; transition: opacity .2s var(--ease); }
+  .cierre__quieto img:global(.cargada) { opacity: 1; }
+  .cierre__quieto :global(.cierre__estatica) { width: 100%; height: auto; }
+  :global(html.js.reducido:not(.fuente-svg)) .cierre__quieto :global(.cierre__estatica) { display: none; }
+  :global(html.js.reducido:not(.fuente-svg)) .cierre__quieto img { display: block; }
+  :global(html.js.reducido:not(.fuente-svg)) .cierre__quieto { aspect-ratio: 16 / 9; }
+
+  /* ——— coreografía ——— */
+  :global(html.js:not(.reducido)) .cierre .cap__escenario {
+    display: block;
+    padding: 0;
+    max-width: none;
+    --izq: max(var(--margin), calc((100vw - var(--contenedor)) / 2 + var(--margin)));
+  }
+  :global(html.js:not(.reducido)) .cierre__quieto { display: none; }
+  /* La frase entra una vez por máscara al cruzar p = 0,45 (1,1 s): de arriba abajo, «se baja». */
+  :global(html.js:not(.reducido)) .cierre__frase {
+    position: absolute;
+    left: var(--izq);
+    top: 72svh;
+    clip-path: inset(-12% -6% 112% -6%);
+  }
+  :global(html.js:not(.reducido)) .cierre__frase:global(.vista) {
+    clip-path: inset(-12% -6% -12% -6%);
+    transition: clip-path var(--d-cierre) var(--ease);
+  }
+  /* Ruta SVG: el punto fijo (0; 0,175) del rig cae en (0,66·W; 0,62·H), con la escala del héroe. */
+  :global(html.js:not(.reducido)) .cierre__moto {
+    display: block;
+    position: absolute;
+    left: calc(66vw - 700 * .04vw);
+    top: calc(62svh - 622.5 * .04vw);
+    width: 56vw;
+    transform-origin: 50% calc(622.5 / 750 * 100%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s var(--ease);
+    --ml-trazo: 1.9px;
+  }
+  :global(html.js.fuente-svg:not(.reducido)) .cierre__moto { opacity: 1; }
+  .cierre__moto :global(.cierre__linea) { width: 100%; height: auto; }
+
+  :global(html.js.compacto:not(.reducido)) .cierre__frase { top: 16svh; }
+  :global(html.js.compacto:not(.reducido)) .cierre__moto {
+    left: calc(50vw - 700 * .08vw);
+    top: calc(70svh - 622.5 * .08vw);
+    width: 112vw;
+    --ml-trazo: 3px;
+  }
+</style>

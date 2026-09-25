@@ -4,7 +4,7 @@
 // Allen instanciados, tuerca de dirección y torretas del manillar.
 import * as THREE from 'three';
 import {
-  D_HORQ, W_HORQ, base, cajaR, ejeHorquilla, extruir, facetar, orientar, redondear, seg, torno, unir,
+  D_HORQ, W_HORQ, base, cajaR, collarin, ejeHorquilla, extruir, facetar, orientar, redondear, seg, torno, unir,
   type Calidad, type Lote,
 } from '../geo.ts';
 import { R_BARRA, Z_HORQ } from './horquilla.ts';
@@ -28,9 +28,9 @@ function formaTija(rBoss: number, rPipa: number): THREE.Shape {
   s.moveTo(zf, rBoss);
   s.lineTo(-zf, rBoss);
   s.absarc(-zf, 0, rBoss, a(90), a(245), false);
-  s.quadCurveTo(-0.055, wp - 0.004, rPipa * Math.cos(a(205)), wp + rPipa * Math.sin(a(205)));
+  s.quadraticCurveTo(-0.055, wp - 0.004, rPipa * Math.cos(a(205)), wp + rPipa * Math.sin(a(205)));
   s.absarc(0, wp, rPipa, a(205), a(335), false);
-  s.quadCurveTo(0.055, wp - 0.004, zf + rBoss * Math.cos(a(-65)), rBoss * Math.sin(a(-65)));
+  s.quadraticCurveTo(0.055, wp - 0.004, zf + rBoss * Math.cos(a(-65)), rBoss * Math.sin(a(-65)));
   s.absarc(zf, 0, rBoss, a(-65), a(90), false);
   // Taladros de las barras y de la tuerca de la pipa (el bisel los cierra 3 mm).
   for (const z of [zf, -zf]) {
@@ -69,9 +69,16 @@ export function tijas(q: Calidad, l: Lote): void {
   const tornillos: THREE.Matrix4[] = [];
   const tija = (t: number, grosor: number, rBoss: number, nPernos: number) => {
     const M = marcoTija(t);
-    const g = extruir(formaTija(rBoss, 0.031), grosor, 0.003, q, 40, 3);
+    const g = extruir(formaTija(rBoss, 0.031), grosor, 0.003, q, 20, 2);
     g.applyMatrix4(M);
     l.add('suspendida', 'tija', 'aluminio', g);
+    // Collarines: aro fino donde cada barra entra y sale de la tija (cara superior e inferior).
+    for (const z of [Z_HORQ, -Z_HORQ]) {
+      for (const lado of [-1, 1]) {
+        const p = new THREE.Vector3(z, 0, lado * (grosor / 2 + 0.0012)).applyMatrix4(M);
+        l.add('suspendida', 'tija', 'cromo', collarin(p, D_HORQ, R_BARRA, q, 0.0022));
+      }
+    }
     // Orejetas de apriete detrás de cada boss, partidas por la ranura (1,6 mm).
     for (const s of [-1, 1]) {
       for (const lado of [-1, 1]) {

@@ -42,7 +42,8 @@ export interface TexturasMoto {
   dispose(): void;
 }
 
-export function crearTexturas(renderer: THREE.WebGLRenderer, tier: Tier): TexturasMoto {
+/** Crea las cuatro texturas; `ceder` se llama entre una y otra para trocear la carga. */
+export async function crearTexturas(renderer: THREE.WebGLRenderer, tier: Tier, ceder: () => Promise<void> = async () => {}): Promise<TexturasMoto> {
   const alto = tier === 'alto';
 
   // Rugosidad compartida (§4.5): variación suave de ±6 % alrededor de 0,94 que
@@ -56,13 +57,17 @@ void main() {
 }`,
   });
 
+  await ceder();
+
   // Piel de naranja del barniz: ruido fino, se aplica con normalScale 0,04.
   const pielNaranja = texturaGPU(renderer, {
     size: 256, espacio: 'lineal',
     frag: RUIDO + /* glsl */`
-float h(vec2 p) { return fbm(p, 16.0); }
-` + NORMAL('h(UV)', 'vec2(1.0 / 256.0)', 24.0),
+float h(vec2 p) { return vruido(p * 64.0, vec2(64.0)) * 0.7 + vruido(p * 128.0, vec2(128.0)) * 0.3; }
+` + NORMAL('h(UV)', 'vec2(1.0 / 256.0)', 1.2),
   });
+
+  await ceder();
 
   // Dibujo del neumático (1024×256): u alrededor de la rueda, v a lo largo del
   // perfil (por longitud de arco). Banda de rodadura en v 0,3..0,7 con surcos
@@ -87,6 +92,8 @@ float h(vec2 p) {
 }
 ` + NORMAL('h(UV)', alto ? 'vec2(1.0 / 1024.0, 1.0 / 256.0)' : 'vec2(1.0 / 512.0, 1.0 / 128.0)', 2.2),
   });
+
+  await ceder();
 
   // Moleteado de puños y estriberas: rombos en diagonal.
   const moleteado = texturaGPU(renderer, {

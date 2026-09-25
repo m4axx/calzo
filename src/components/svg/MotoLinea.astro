@@ -57,8 +57,12 @@ const circ = (c: V, r: number, estilo = '', extra = '') =>
 const polar = (c: V, r: number, g: number): V => [c[0] + r * Math.cos(g * Math.PI / 180), c[1] - r * Math.sin(g * Math.PI / 180)];
 const circulo = (c: V, r: number) => `M${n2([c[0] + r, c[1]])}A${r1(r)} ${r1(r)} 0 1 0 ${n2([c[0] - r, c[1]])}A${r1(r)} ${r1(r)} 0 1 0 ${n2([c[0] + r, c[1]])}Z`;
 const anillo = (c: V, re: number, ri: number) => circulo(c, re) + circulo(c, ri);
+/** Arco en metros (y arriba), de g0 a g1 grados. */
 const arco = (c: V, r: number, g0: number, g1: number, n = 16): V[] =>
-  Array.from({ length: n + 1 }, (_, i) => polar(c, r, g0 + (g1 - g0) * i / n));
+  Array.from({ length: n + 1 }, (_, i) => {
+    const g = (g0 + (g1 - g0) * i / n) * Math.PI / 180;
+    return [c[0] + r * Math.cos(g), c[1] + r * Math.sin(g)] as V;
+  });
 const hexagono = (c: V, r: number, g = 0) => lin(Array.from({ length: 6 }, (_, i) => polar(c, r, g + i * 60)), true);
 
 /** Catmull-Rom uniforme → Bézier cúbicas (unidades del viewBox). */
@@ -249,7 +253,9 @@ function piezas(): Record<string, string> {
     + tubo(linM([[-0.20, 0.50], [-0.55, 0.76]]), D_CH)
     + [[-0.18, 0.55], [-0.55, 0.76], [-0.07, 0.66], [-0.12, 0.74]].map((p) => circ(S(p as V), 8.5, '', ' opacity=".7"')).join('')
     + path(suaveM([[-0.155, 0.525], [-0.245, 0.515], [-0.26, 0.40], [-0.235, 0.345], [-0.16, 0.35], [-0.145, 0.44]], true), FONDO)
-    + circ(S([-0.20, 0.40]), 5);
+    + circ(S([-0.20, 0.40]), 5)
+    // Cable de embrague: de la maneta pasa por detrás del depósito y baja a la tapa del motor.
+    + path(suaveM([[0.425, 0.985], [0.36, 0.93], [0.26, 0.86], [0.08, 0.74], [-0.06, 0.60], [-0.04, 0.47]], false), '', ' opacity=".8"');
 
   // — Motor: cárter con bisel, tapa lateral, cilindro inclinado 20° con 11 aletas, culata —
   {
@@ -321,7 +327,7 @@ function piezas(): Record<string, string> {
   // — Tren delantero (fijo): disco lejano, rueda, disco cercano con su pinza, guardabarros, botellas —
   P.delLejos = disco(EJE_DEL, 80, 18, 5);
   P.ruedaDel = rueda(EJE_DEL, 0);
-  P.discoDel = disco(EJE_DEL, 80, 18, 5) + path(linM([[0.71, 0.33], [0.64, 0.28], [0.625, 0.25]]), 'stroke-width:calc(8px + var(--ml-trazo,1.6px))')
+  P.discoDel = disco(EJE_DEL, 80, 18, 5) + tubo(linM([[0.71, 0.33], [0.64, 0.28], [0.625, 0.25]]), 8)
     + pinza(EJE_DEL, 80);
   {
     const c: V = [ANCLAS.anc_contacto_del[0], 0.31];
@@ -352,9 +358,9 @@ function piezas(): Record<string, string> {
     + circ(S([0.40, 0.99]), 8.5, FONDO) + circ(S([0.40, 0.99]), 4.2)
     + path(linM([[0.455, 0.93], [0.465, 1.0]]), 'stroke-width:calc(5px + var(--ml-trazo,1.6px))')
     + rect(S([0.46, 1.02]), 56, 25, 9, 25) + path(linM([polar(S([0.46, 1.02]), 20, 115), polar(S([0.46, 1.02]), 20, -65)]), '', ' opacity=".5"');
-  // Latiguillo (bomba → pinza) y cable de embrague (maneta → motor), con su catenaria.
+  // Latiguillo de freno (bomba → pinza), con su catenaria.
   P.cables = path(suaveM([[0.435, 0.975], [0.505, 0.90], [0.53, 0.70], [0.585, 0.52], [0.625, 0.33], [0.625, 0.265]], false), '', ' opacity=".8"')
-    + path(suaveM([[0.425, 0.985], [0.37, 0.93], [0.36, 0.80], [0.29, 0.66], [0.10, 0.57], [0.01, 0.45]], false), '', ' opacity=".8"');
+;
   return P;
 }
 

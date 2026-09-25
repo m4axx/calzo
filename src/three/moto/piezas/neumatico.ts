@@ -3,7 +3,7 @@
 // un parche plano de 6 mm, que es lo que hace que la moto «pese».
 import * as THREE from 'three';
 import { APOYO_HUELLA } from '../../contrato-tipos.ts';
-import { orientar, seg, superelipse, torno, type Calidad, type Lote } from '../geo.ts';
+import { orientar, seg, superelipse, torno, type Calidad } from '../geo.ts';
 
 export const R_RUEDA = 0.31;
 export const R_TALON = 0.216;
@@ -36,9 +36,4 @@ export function neumatico(q: Calidad, x: number, ancho: number): THREE.BufferGeo
     }
   }
   return g;
-}
-
-export function neumaticos(q: Calidad, l: Lote): void {
-  l.add('delantera', 'rueda_del', 'goma', neumatico(q, 0.725, 0.12));
-  l.add('trasera', 'resto', 'goma', neumatico(q, -0.725, 0.17));
 }

@@ -1,0 +1,241 @@
+---
+// Taller temporal de WP1 (noindex). Se borra antes de integrar: no puede
+// llegar a dist. Escena mínima de §4.7 con la moto sobre una plataforma y
+// los planos de §4.9 por ?plano=.
+//   ?plano=pieza.b|am.tija|am.rueda|am.cenital|…  ?foco=tija&mezcla=1
+//   ?horquilla=1  ?apoyo=0.35  ?silueta=1  ?tier=medio  ?maqueta=1  ?glb=1
+//   ?clave=1 ?entorno=0.5 ?contras=1 ?rot=0 (rotación del entorno, rad)
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Taller · moto</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0B0D0E; overflow: hidden; }
+      canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <script>
+      import * as THREE from 'three';
+      import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+      import { crearMoto } from '../three/moto/crearMoto.ts';
+      import { crearUniforms } from '../three/moto/materiales.ts';
+      import { crearEntorno } from '../three/entorno.ts';
+      import { crearMotoMaqueta } from '../three/maqueta.ts';
+      import { texturaGPU } from '../three/gpu-textura.ts';
+      import { PLATAFORMA_ARRIBA, type MotoRig, type PiezaId, type Tier } from '../three/contrato-tipos.ts';
+
+      type V = [number, number, number];
+      (async () => {
+      // Planos de §4.9 (pos, mira, fov, +A, arriba). El encuadre por setViewOffset es de WP2.
+      const PLANOS: Record<string, { pos: V; mira: V; fov: number; a?: boolean; arriba?: V }> = {
+        'pieza.a': { pos: [3.10, 0.90, 2.60], mira: [0, 0.52, 0], fov: 26 },
+        'pieza.b': { pos: [2.70, 0.55, 2.20], mira: [0.05, 0.50, 0], fov: 24 },
+        'am.bajo': { pos: [2.40, 0.55, 2.10], mira: [0.20, 0.35, 0], fov: 24 },
+        'am.rueda': { pos: [1.95, 0.32, 1.05], mira: [0.80, 0.24, 0], fov: 22, a: true },
+        'am.calzo': { pos: [1.85, 0.32, 0.95], mira: [0.85, 0.15, 0], fov: 22, a: true },
+        'am.tija': { pos: [1.25, 1.05, 0.70], mira: [0.50, 0.80, 0.02], fov: 20, a: true },
+        'am.delanteras': { pos: [2.35, 0.85, 1.75], mira: [0.85, 0.40, 0], fov: 24, a: true },
+        'am.traseras': { pos: [0.60, 0.75, -3.10], mira: [0.10, 0.40, 0], fov: 26, a: true },
+        'am.horquilla': { pos: [1.30, 0.60, -1.20], mira: [0.62, 0.52, -0.10], fov: 18, a: true },
+        'am.grua1': { pos: [2.00, 2.60, -1.20], mira: [0, 0.30, 0], fov: 28, a: true },
+        'am.cenital': { pos: [0, 5.50, 0], mira: [0, 0, 0], fov: 30, a: true, arriba: [0, 0, -1] },
+        'parte.A': { pos: [2.30, 0.80, 2.00], mira: [0.30, 0.52, 0], fov: 26, a: true },
+        'parte.B': { pos: [-2.10, 0.95, 2.20], mira: [-0.25, 0.55, 0], fov: 26, a: true },
+        'parte.C': { pos: [-2.10, 0.95, -2.20], mira: [-0.25, 0.55, 0], fov: 26, a: true },
+        'parte.D': { pos: [2.30, 0.80, -2.00], mira: [0.30, 0.52, 0], fov: 26, a: true },
+        'cierre.b': { pos: [2.62, 0.725, 2.13], mira: [0.05, 0.675, 0], fov: 24 },
+        // Planos propios del taller, fuera del recorrido: para revisar piezas.
+        'taller.lado': { pos: [0, 0.55, 4.2], mira: [0, 0.55, 0], fov: 26 },
+        'taller.dcha': { pos: [0.4, 0.7, -3.6], mira: [0, 0.5, 0], fov: 26 },
+        'taller.frente': { pos: [3.6, 0.9, 0.6], mira: [0, 0.55, 0], fov: 22 },
+        'taller.detras': { pos: [-2.8, 1.1, 1.6], mira: [0, 0.5, 0], fov: 26 },
+        'taller.motor': { pos: [1.0, 0.55, 1.3], mira: [0.05, 0.45, 0.0], fov: 22 },
+        'taller.manillar': { pos: [0.9, 1.35, 0.5], mira: [0.42, 0.97, 0.0], fov: 26 },
+        'taller.deposito': { pos: [0.6, 1.9, 1.1], mira: [0.12, 0.9, 0.0], fov: 22 },
+      };
+
+      const qs = new URLSearchParams(location.search);
+      const num = (k: string, d: number) => (qs.has(k) ? Number(qs.get(k)) : d);
+      const idPlano = qs.get('plano') ?? 'pieza.b';
+      const plano = PLANOS[idPlano] ?? PLANOS['pieza.b'];
+      const tier = (qs.get('tier') ?? 'alto') as Tier;
+      const silueta = qs.get('silueta') === '1';
+      const apoyo = num('apoyo', plano.a ? PLATAFORMA_ARRIBA : 0);
+      const clave = num('clave', silueta ? 0 : 1);
+      const entornoI = num('entorno', silueta ? 0.05 : 0.5);
+      const contras = num('contras', silueta ? 0.35 : 1);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: true });
+      renderer.setPixelRatio(1);
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.toneMapping = THREE.AgXToneMapping;
+      renderer.toneMappingExposure = 0.9;
+      renderer.setClearColor('#0B0D0E');
+      const sombras = tier === 'alto';
+      renderer.shadowMap.enabled = sombras;
+      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.autoUpdate = false;
+      document.body.appendChild(renderer.domElement);
+
+      const escena = new THREE.Scene();
+      escena.environment = crearEntorno(renderer, tier);
+      escena.environmentIntensity = entornoI;
+      escena.environmentRotation.y = num('rot', 0);
+
+      // Luces de §4.7.
+      const spot = new THREE.SpotLight('#EFEEEA', 35 * clave, 0, 0.45, 0.9, 2);
+      spot.position.set(2.6, 3.2, 2.4);
+      if (sombras) {
+        spot.castShadow = true;
+        spot.shadow.mapSize.set(1024, 1024);
+        spot.shadow.radius = 3;
+        spot.shadow.normalBias = 0.02;
+        spot.shadow.camera.near = 2.2;
+        spot.shadow.camera.far = 7;
+      }
+      escena.add(spot, spot.target);
+      const contraA = new THREE.DirectionalLight('#CDD2D5', 1.2 * contras);
+      contraA.position.set(-2.2, 1.6, -1.8);
+      contraA.target.position.set(0, 0.6, 0);
+      const contraB = new THREE.DirectionalLight('#CDD2D5', 0.8 * contras);
+      contraB.position.set(-1.0, 2.4, 2.2);
+      escena.add(contraA, contraA.target, contraB);
+
+      // Suelo con la junta del elevador y plataforma (versión mínima; la real es de WP2).
+      const alfaSuelo = texturaGPU(renderer, {
+        size: 512, espacio: 'lineal',
+        frag: `varying vec2 vUv; void main(){ float d = length(vUv - 0.5) * 2.0; gl_FragColor = vec4(vec3(1.0 - smoothstep(0.12, 0.62, d)), 1.0); }`,
+      });
+      const forma = new THREE.Shape();
+      forma.absarc(0, 0, 8, 0, Math.PI * 2, false);
+      const hueco = new THREE.Path();
+      hueco.moveTo(-1.312, -0.462); hueco.lineTo(-1.312, 0.462); hueco.lineTo(1.312, 0.462); hueco.lineTo(1.312, -0.462); hueco.lineTo(-1.312, -0.462);
+      forma.holes.push(hueco);
+      const gSuelo = new THREE.ShapeGeometry(forma, 64);
+      const uv = gSuelo.getAttribute('uv') as THREE.BufferAttribute, pp = gSuelo.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, pp.getX(i) / 16 + 0.5, pp.getY(i) / 16 + 0.5);
+      gSuelo.rotateX(-Math.PI / 2);
+      const suelo = new THREE.Mesh(gSuelo, new THREE.MeshStandardMaterial({ color: '#0B0D0E', roughness: 0.32, metalness: 0, alphaMap: alfaSuelo, transparent: true, dithering: true }));
+      suelo.receiveShadow = true;
+      escena.add(suelo);
+      const { RoundedBoxGeometry } = await import('three/examples/jsm/geometries/RoundedBoxGeometry.js');
+      const plataforma = new THREE.Mesh(new RoundedBoxGeometry(2.6, 0.4, 0.9, 2, 0.006),
+        new THREE.MeshPhysicalMaterial({ color: '#8E9194', metalness: 1, roughness: 0.34, anisotropy: 0.4 }));
+      plataforma.position.y = apoyo - 0.2;
+      plataforma.receiveShadow = true;
+      plataforma.castShadow = true;
+      escena.add(plataforma);
+      // Sombra de contacto: elipse difusa y dos manchas en los contactos (GPU).
+      const sombraTex = texturaGPU(renderer, {
+        size: 512, espacio: 'lineal',
+        frag: `varying vec2 vUv; void main(){
+          vec2 p = (vUv - 0.5) * vec2(2.4, 0.8);
+          float e = 1.0 - smoothstep(0.1, 1.0, length(p / vec2(1.0, 0.25)));
+          float m = exp(-pow(length(p - vec2(0.725, 0.0)) / 0.09, 2.0)) + exp(-pow(length(p + vec2(0.725, 0.0)) / 0.1, 2.0));
+          gl_FragColor = vec4(vec3(clamp(e * 0.55 + m * 0.7, 0.0, 1.0)), 1.0); }`,
+      });
+      const sombra = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.8),
+        new THREE.MeshBasicMaterial({ color: '#000000', alphaMap: sombraTex, transparent: true, depthWrite: false }));
+      sombra.rotation.x = -Math.PI / 2;
+      sombra.position.y = apoyo + 0.001;
+      escena.add(sombra);
+
+      // Moto.
+      const U = crearUniforms();
+      const t0 = performance.now();
+      let rig: MotoRig;
+      const opts = { tier, U, renderer, progreso: (f: number) => { (window as any).__progreso = f; } };
+      if (qs.get('maqueta') === '1') rig = await crearMotoMaqueta(opts);
+      else if (qs.get('glb') === '1') rig = await (await import('../three/moto/cargarGLB.ts')).cargarGLB(await glbDePrueba(), opts);
+      else rig = await crearMoto(opts);
+      const tConstruccion = performance.now() - t0;
+      escena.add(rig.root);
+      // Depuración: ?sin=rug,piel,normal quita mapas de los materiales de la moto.
+      const sin = new Set((qs.get('sin') ?? '').split(','));
+      rig.root.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined;
+        if (!m || !(o as THREE.Mesh).isMesh) return;
+        if (sin.has('rug')) m.roughnessMap = null;
+        if (sin.has('piel')) m.clearcoatNormalMap = null;
+        if (sin.has('normal')) m.normalMap = null;
+        m.needsUpdate = true;
+      });
+      rig.setApoyo(apoyo);
+      rig.setHorquilla(num('horquilla', 0));
+      if (qs.has('foco')) rig.setFoco(qs.get('foco') as PiezaId, num('mezcla', 1));
+      rig.root.updateMatrixWorld(true);
+
+      // Cámara del plano; blanco de la clave en el ancla de la pausa, si la hay.
+      const dy = plano.a ? PLATAFORMA_ARRIBA : 0;
+      const cam = new THREE.PerspectiveCamera(plano.fov, innerWidth / innerHeight, 0.05, 40);
+      cam.position.set(plano.pos[0], plano.pos[1] + dy, plano.pos[2]);
+      if (plano.arriba) cam.up.set(...plano.arriba);
+      cam.lookAt(plano.mira[0], plano.mira[1] + dy, plano.mira[2]);
+      const ancla = qs.get('blanco') ?? ({ 'am.tija': 'hs_tija', 'am.rueda': 'hs_rueda', 'am.horquilla': 'hs_horquilla' } as Record<string, string>)[idPlano];
+      if (ancla && ancla in rig.anclas) rig.anclas[ancla as keyof typeof rig.anclas].getWorldPosition(spot.target.position);
+      else spot.target.position.set(0, apoyo + 0.4, 0);
+
+      const tc = performance.now();
+      await renderer.compileAsync(escena, cam);
+      const tCompilar = performance.now() - tc;
+      renderer.shadowMap.needsUpdate = true;
+      renderer.render(escena, cam);
+      const info = { calls: renderer.info.render.calls, triangulos: renderer.info.render.triangles, programas: renderer.info.programs?.length ?? 0 };
+      let callsMoto = 0;
+      rig.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) callsMoto++; });
+      (window as any).__taller = {
+        listo: true, plano: idPlano, tier, construccionMs: Math.round(tConstruccion), compilarMs: Math.round(tCompilar),
+        medidas: rig.root.userData.medidas, info, callsMoto, caja: [rig.caja.min.toArray(), rig.caja.max.toArray()],
+      };
+      document.title = 'listo';
+
+      /** GLB de cajas generado en código con GLTFExporter: nombres de grupos, piezas, roles y anclas de §4.11. */
+      async function glbDePrueba(): Promise<string> {
+        const s = new THREE.Scene();
+        const mat = (rol: string) => { const m = new THREE.MeshStandardMaterial({ color: '#888888' }); m.name = rol; return m; };
+        const caja = (nombre: string, rol: string, w: number, h: number, d: number, x: number, y: number, z: number) => {
+          const nodo = new THREE.Object3D();
+          nodo.name = nombre;
+          const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(rol));
+          m.position.set(x, y, z);
+          nodo.add(m);
+          return nodo;
+        };
+        const rueda = (nombre: string, x: number, ancho: number) => {
+          const nodo = new THREE.Object3D();
+          nodo.name = nombre;
+          const g = new THREE.CylinderGeometry(0.31, 0.31, ancho, 32);
+          g.rotateX(Math.PI / 2);
+          const m = new THREE.Mesh(g, mat('goma'));
+          m.position.set(x, 0.31 + 0.0, 0);
+          nodo.add(m);
+          return nodo;
+        };
+        const sus = new THREE.Object3D(); sus.name = 'suspendida';
+        const del = new THREE.Object3D(); del.name = 'delantera';
+        const tra = new THREE.Object3D(); tra.name = 'trasera';
+        sus.add(caja('deposito', 'pintura', 0.53, 0.22, 0.32, 0.135, 0.89, 0));
+        sus.add(caja('motor', 'fundicion', 0.45, 0.28, 0.30, 0.025, 0.38, 0));
+        sus.add(caja('tija', 'aluminio', 0.15, 0.03, 0.28, 0.505, 0.765, 0));
+        sus.add(caja('mandos', 'cromo', 0.08, 0.04, 0.76, 0.42, 0.97, 0));
+        sus.add(caja('asiento', 'asiento', 0.5, 0.07, 0.26, -0.37, 0.81, 0));
+        del.add(caja('horquilla_botellas', 'anodizado', 0.06, 0.34, 0.26, 0.65, 0.48, 0));
+        del.add(rueda('rueda_del', 0.725, 0.12));
+        tra.add(rueda('rueda_tras', -0.725, 0.17));
+        tra.add(caja('chasis', 'anodizado', 0.5, 0.05, 0.28, -0.46, 0.39, 0));
+        s.add(sus, del, tra);
+        const piv = new THREE.Object3D(); piv.name = 'pivote_suspension'; piv.position.set(-0.725, 0.31, 0); s.add(piv);
+        const e = new THREE.Object3D(); e.name = 'hs_tija'; e.position.set(0.50, 0.80, 0.02); sus.add(e);
+        const exp = new GLTFExporter();
+        const buf = await exp.parseAsync(s, { binary: true }) as ArrayBuffer;
+        return URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
+      }
+      })().catch((e) => { console.error(e); (window as any).__taller = { error: String(e && e.stack || e) }; document.title = 'error'; });
+    </script>
+  </body>
+</html>

@@ -31,9 +31,9 @@ function corona(rTip: number, dientes: number): THREE.Shape {
   s.holes.push(c);
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2 + 0.3;
-    const h = new THREE.Path();
-    h.absarc(0.062 * Math.cos(a), 0.062 * Math.sin(a), 0.017, 0, Math.PI * 2, true);
-    s.holes.push(h);
+    const pts: THREE.Vector2[] = [];
+    for (let i = 16; i > 0; i--) { const t = (i / 16) * Math.PI * 2; pts.push(new THREE.Vector2(0.062 * Math.cos(a) + 0.017 * Math.cos(t), 0.062 * Math.sin(a) + 0.017 * Math.sin(t))); }
+    s.holes.push(new THREE.Path(pts));
   }
   return s;
 }
