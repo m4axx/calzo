@@ -1,0 +1,8 @@
+---
+// Chevron de 12 px para los selects nativos (§3.9). `▾` no está en las fuentes.
+interface Props { class?: string }
+const { class: cls } = Astro.props;
+---
+<svg class:list={['chevron', cls]} width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+  <path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" />
+</svg>

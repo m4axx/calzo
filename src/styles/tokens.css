@@ -1,0 +1,72 @@
+/* Tokens (§3.1). Dueño: WP0. Temperatura fría; el naranja es lo único cálido. */
+:root {
+  /* — color: grafito frío; nunca #000 ni #fff — */
+  --carbon: #0B0D0E;        /* fondo base y clearColor del canvas */
+  --grafito: #131618;       /* seguro y rutas; nav tras el héroe */
+  --grafito-alto: #1A1E21;  /* panel de precio (sólido) y campos */
+  --junta: #262B2E;         /* hairlines de 1 px y bordes de campo (nunca texto) */
+  --ceniza: #858C91;        /* texto secundario y notas «provisional» */
+  --hueso: #E4E6E3;         /* texto principal y foco */
+  --aluminio: #A7AEB3;      /* anillas, contorno de carracas, filo del select destacado */
+  --cincha: #D2561F;        /* ÚNICO ACENTO */
+  --cincha-floja: #2A2F33;  /* cincha sin tensión (3D y SVG) */
+  --papel: #DCDDD8;         /* banda de papel: cargas + parte */
+  --tinta: #121517;         /* texto y trazo sobre papel */
+  --tinta-2: #4F565B;       /* secundario y cotas sobre papel */
+  --luz-clave: #EFEEEA;     /* solo 3D: clave neutra (~5.600 K) */
+  --luz-contra: #CDD2D5;    /* solo 3D: contras plata */
+  --pintura: #26272A;       /* solo 3D: depósito */
+
+  /* — tipografía — */
+  --f-display: 'Big Shoulders Display Variable', 'BSD Narrow', 'BSD Roboto', 'BSD Arial', sans-serif;
+  --f-texto: 'Newsreader Variable', 'NR Georgia', 'NR Noto', 'NR Times', serif;
+  --f-cifras: 'Overpass Mono Variable', 'OM Consolas', 'OM Menlo', 'OM Roboto', monospace;
+  --f-cierre: 'Newsreader Cierre', 'NR Georgia', serif;
+
+  --t-etiqueta: .8125rem;
+  --t-cifra: .9375rem;
+  --t-cuerpo: clamp(1.0625rem, .95rem + .35vw, 1.25rem);
+  --t-entrada: clamp(1.25rem, 1.05rem + .6vw, 1.625rem);
+  --t-h3: clamp(1.625rem, 1.2rem + 1.4vw, 2.5rem);
+  --t-h2: clamp(2.75rem, 1.4rem + 4.6vw, 7rem);
+  --t-h1: clamp(3.25rem, 1.2rem + 6.6vw, 9.25rem);
+  --t-precio: clamp(3.5rem, 1.8rem + 4.6vw, 7rem);
+  --t-cta: clamp(2.5rem, 1.2rem + 4.2vw, 6rem);
+  --t-cierre: clamp(3.5rem, 1rem + 8.4vw, 10.5rem);
+
+  /* — espacio (móvil 20/30/50/75/100 → escritorio 60/90/140/200/280) — */
+  --e-1: clamp(1.25rem, .5rem + 2.3vw, 3.75rem);
+  --e-2: clamp(1.875rem, .8rem + 3.4vw, 5.625rem);
+  --e-3: clamp(3.125rem, 1.2rem + 5.8vw, 8.75rem);
+  --e-4: clamp(4.6875rem, 1.6rem + 9.6vw, 12.5rem);
+  --e-5: clamp(6.25rem, 2rem + 13.3vw, 17.5rem);
+
+  /* — rejilla — */
+  --cols: 4; --gutter: 10px; --margin: 16px; --contenedor: 100rem;
+
+  /* — forma — */
+  --r-s: 2px; --r-m: 4px;
+  --borde: 1px solid var(--junta);
+
+  /* — movimiento — */
+  --ease: cubic-bezier(.62, 0, .12, 1);
+  --d-micro: .2s; --d-entrada: .9s; --d-cierre: 1.1s;
+
+  /* — composición del héroe (compartida DOM ↔ 3D ↔ SVG) — */
+  --suelo-y: 80svh; --suelo-x0: 8vw; --suelo-x1: 92vw;
+
+  /* — traspaso: margen de las cinchas alrededor del panel — */
+  --amarre-dx: 14px; --amarre-dy: 48px; --cincha-ancho: 6px;
+
+  /* — capas — */
+  --z-escena: 1; --z-main: 3; --z-cinchas: 4; --z-nav: 10; --z-barra: 10;
+}
+@media (min-width: 768px) {
+  :root { --cols: 12; --gutter: 2vw; --margin: 4vw; }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  :root {
+    --suelo-y: 72svh; --suelo-x0: 46vw; --suelo-x1: 88vw;
+    --amarre-dx: clamp(48px, 6vw, 112px); --amarre-dy: clamp(40px, 8svh, 96px); --cincha-ancho: 10px;
+  }
+}

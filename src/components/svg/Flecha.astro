@@ -1,0 +1,8 @@
+---
+// Flecha de 14 px con trazo de 1,8 px (§3.9). `→` no está en las fuentes.
+interface Props { class?: string }
+const { class: cls } = Astro.props;
+---
+<svg class:list={['flecha', cls]} width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+  <path d="M1 7h11M8 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+</svg>

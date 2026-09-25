@@ -1,0 +1,16 @@
+---
+// STUB de WP0 — lo completa WP3 (§2.1).
+import { calcularPrecio } from '../lib/precio.js';
+const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
+---
+<section id="pieza" class="cap cap--fija" data-cap="pieza" aria-labelledby="pieza-h">
+  <div class="cap__pista" style="--fija-d: 80; --fija-m: 50">
+    <div class="cap__escenario">
+      <h1 id="pieza-h" class="h1">
+        <span class="h1__lema">Se sube atado. Se baja igual.</span>
+        <span class="h1__servicio">Transporte de motos, quads y embarcaciones por carretera, desde Madrid a toda España.</span>
+      </h1>
+      <p class="pieza__frase"><span data-precio="articulo">{r.articulo}</span> de Madrid a Valencia: <span data-precio="total">{r.totalTxt}</span></p>
+    </div>
+  </div>
+</section>

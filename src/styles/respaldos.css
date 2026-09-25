@@ -1,0 +1,73 @@
+/* Generado por scripts/respaldo-fuentes.mjs — no editar a mano. */
+@font-face {
+  font-family: 'BSD Narrow';
+  src: local('Arial Narrow');
+  size-adjust: 65.8481%;
+  ascent-override: 149.4348%;
+  descent-override: 32.3472%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'BSD Roboto';
+  src: local('Roboto');
+  size-adjust: 54.0663%;
+  ascent-override: 181.9988%;
+  descent-override: 39.3961%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'BSD Arial';
+  src: local('Arial');
+  size-adjust: 53.9479%;
+  ascent-override: 182.3983%;
+  descent-override: 39.4826%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'NR Georgia';
+  src: local('Georgia');
+  size-adjust: 96.1192%;
+  ascent-override: 76.4676%;
+  descent-override: 27.5699%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'NR Noto';
+  src: local('Noto Serif');
+  size-adjust: 89.0852%;
+  ascent-override: 82.5053%;
+  descent-override: 29.7468%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'NR Times';
+  src: local('Times New Roman');
+  size-adjust: 105.4769%;
+  ascent-override: 69.6835%;
+  descent-override: 25.124%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'OM Consolas';
+  src: local('Consolas');
+  size-adjust: 112.0398%;
+  ascent-override: 78.8113%;
+  descent-override: 34.1843%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'OM Menlo';
+  src: local('Menlo');
+  size-adjust: 102.317%;
+  ascent-override: 86.3005%;
+  descent-override: 37.4327%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'OM Roboto';
+  src: local('Roboto Mono');
+  size-adjust: 102.65%;
+  ascent-override: 86.0205%;
+  descent-override: 37.3113%;
+  line-gap-override: 0%;
+}

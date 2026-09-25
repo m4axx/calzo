@@ -1,26 +1,34 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
-import Hero from '../components/Hero.astro';
-import Cargas from '../components/Cargas.astro';
-import Parte from '../components/Parte.astro';
-import Rutas from '../components/Rutas.astro';
-import Seguro from '../components/Seguro.astro';
-import Contacto from '../components/Contacto.astro';
-
-const title = 'Calzo · Transporte de motos, quads y embarcaciones desde Madrid';
-const description =
-  'Transporte de motos, quads y barcos por carretera. Salidas desde Madrid a toda España, parte de fotos al cargar y al entregar, y seguro por valor declarado.';
+import CapPieza from '../components/CapPieza.astro';
+import CapAmarre from '../components/CapAmarre.astro';
+import CapPrecio from '../components/CapPrecio.astro';
+import CapCargas from '../components/CapCargas.astro';
+import CapParte from '../components/CapParte.astro';
+import CapSeguro from '../components/CapSeguro.astro';
+import CapRutas from '../components/CapRutas.astro';
+import CapCierre from '../components/CapCierre.astro';
+import ContactoCta from '../components/ContactoCta.astro';
+import Pie from '../components/Pie.astro';
+import BarraMovil from '../components/BarraMovil.astro';
 ---
 
-<Layout title={title} description={description}>
+<Layout
+  title="Calzo · Transporte de motos, quads y embarcaciones desde Madrid"
+  description="Transporte de motos, quads y barcos por carretera. Salidas desde Madrid a toda España, parte de fotos al cargar y al entregar, y seguro por valor declarado."
+>
   <Nav />
-  <main>
-    <Hero />
-    <Cargas />
-    <Parte />
-    <Rutas />
-    <Seguro />
-    <Contacto />
+  <main id="contenido">
+    <CapPieza />
+    <CapAmarre />
+    <CapPrecio />
+    <CapCargas />
+    <CapParte />
+    <CapSeguro />
+    <CapRutas />
+    <CapCierre><ContactoCta slot="cta" /></CapCierre>
   </main>
+  <Pie />
+  <BarraMovil />
 </Layout>

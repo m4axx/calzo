@@ -1,7 +1,12 @@
 ---
+// Layout único (§5.2). Dueño: WP0.
+import '@fontsource-variable/big-shoulders-display/wght';
+import '@fontsource-variable/newsreader/wght';
+import '@fontsource-variable/overpass-mono/wght';
+import bsd from '@fontsource-variable/big-shoulders-display/files/big-shoulders-display-latin-wght-normal.woff2?url';
 import '../styles/global.css';
 
-interface Props { title: string; description: string; }
+interface Props { title: string; description: string }
 const { title, description } = Astro.props;
 ---
 
@@ -9,28 +14,37 @@ const { title, description } = Astro.props;
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0D0E" />
 
-    <!-- Marca que hay JS antes del primer pintado. Las animaciones de entrada
-         solo se activan con esta clase: sin JS la pagina se ve entera, en vez
-         de quedarse en blanco. -->
-    <script is:inline>document.documentElement.classList.add('js');</script>
+    <!-- Antes de pintar y sin crear ningún contexto WebGL (§5.5). -->
+    <script is:inline>
+      (function () {
+        var cl = document.documentElement.classList, q = new URLSearchParams(location.search), mm = function (m) { return matchMedia(m).matches; };
+        cl.add('js');
+        if (mm('(prefers-reduced-motion: reduce)') || q.get('rm') === '1') cl.add('reducido');
+        var tactil = mm('(pointer: coarse)'), compacto = innerWidth < 1024 || tactil;
+        if (tactil) cl.add('tactil');
+        if (compacto) cl.add('compacto');
+        var n = navigator, mem = n.deviceMemory || 8, cpu = n.hardwareConcurrency || 8, ahorro = n.connection && n.connection.saveData;
+        var tier = (mem <= 2 || cpu <= 2 || ahorro || (tactil && mem <= 4 && cpu <= 4)) ? 'bajo' : compacto ? 'medio' : 'alto';
+        var f = q.get('tier');
+        if (f === 'alto' || f === 'medio' || f === 'bajo' || f === 'sin-webgl') tier = f;
+        cl.add('tier-' + tier);
+        setTimeout(function () { if (!cl.contains('app-viva')) cl.remove('js'); }, 4000);
+      })();
+    </script>
+
     <title>{title}</title>
     <meta name="description" content={description} />
 
-    <!-- NOINDEX A PROPOSITO.
-         La empresa todavia no existe: sin CIF no se puede contratar nada.
-         Que Google indexe ahora un negocio no contratable es empezar con
-         deuda. Se quita esta linea y el public/robots.txt el dia del alta. -->
+    <!-- NOINDEX A PROPÓSITO.
+         La empresa todavía no existe: sin CIF no se puede contratar nada.
+         Se quita esta línea y el public/robots.txt el día del alta. -->
     <meta name="robots" content="noindex, nofollow" />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-    />
+    <link rel="preload" href={bsd} as="font" type="font/woff2" crossorigin />
 
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -39,23 +53,21 @@ const { title, description } = Astro.props;
   </head>
 
   <body>
+    <a class="saltar" href="#precio">Ir a la calculadora</a>
+    <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <pattern id="tejido" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#0B0D0E" stroke-opacity=".18" stroke-width="1" />
+        </pattern>
+      </defs>
+    </svg>
+    <div id="capa-escena" aria-hidden="true"></div>
+    <svg id="capa-cinchas" aria-hidden="true" focusable="false"></svg>
+
     <slot />
 
     <script>
-      // Aparicion al entrar en pantalla. Una sola vez: nada de elementos que
-      // se desvanecen al volver a subir, que es lo que delata el efecto.
-      const io = new IntersectionObserver(
-        (entradas) => {
-          for (const e of entradas) {
-            if (e.isIntersecting) {
-              e.target.classList.add('seen');
-              io.unobserve(e.target);
-            }
-          }
-        },
-        { rootMargin: '0px 0px -12% 0px', threshold: 0.08 }
-      );
-      document.querySelectorAll('.rise').forEach((el) => io.observe(el));
+      import '../lib/app.ts';
     </script>
   </body>
 </html>
