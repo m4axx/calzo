@@ -1,0 +1,7 @@
+---
+// STUB de WP0 — lo completa WP4 (§3.9). Pictograma de carga de 28 px, línea de 1 px.
+//   carga: 'moto' | 'quad' | 'barco' | 'coche'
+interface Props { carga: 'moto' | 'quad' | 'barco' | 'coche'; class?: string }
+const { class: cls } = Astro.props;
+---
+<svg class:list={['picto', cls]} width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"></svg>

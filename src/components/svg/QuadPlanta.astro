@@ -1,0 +1,9 @@
+---
+// STUB de WP0 — lo completa WP5 (§5.5). Contrato de props:
+//   mini?: boolean   versión de 1 px para la mini-lámina del panel de precio (WP4)
+//   revelar?: boolean añade data-revelar="mascara" (lámina de #cargas)
+//   class?: string
+interface Props { mini?: boolean; revelar?: boolean; class?: string }
+const { class: cls } = Astro.props;
+---
+<svg class:list={['quad-planta', cls]} viewBox="0 0 400 300" role="img" aria-label="Quad visto desde arriba, atado en cruz con cuatro cinchas y un calzo en cada rueda"></svg>

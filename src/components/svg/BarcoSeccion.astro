@@ -1,0 +1,10 @@
+---
+// STUB de WP0 — lo completa WP5 (§5.5). Contrato de props:
+//   mini?: boolean   versión de la mini-lámina del panel (WP4). En mini, el grupo
+//                    .barco__casco se ensancha con html.manga-ancha (lo pone WP4)
+//   revelar?: boolean añade data-revelar="mascara"
+//   class?: string
+interface Props { mini?: boolean; revelar?: boolean; class?: string }
+const { class: cls } = Astro.props;
+---
+<svg class:list={['barco-seccion', cls]} viewBox="0 0 400 300" role="img" aria-label="Barco en sección sobre su cuna, apoyado en quilla y pantoques, con la cota de manga"></svg>

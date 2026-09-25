@@ -1,0 +1,12 @@
+---
+// STUB de WP0 — lo completa WP3 (§5.5). Alzado de la moto, viewBox 0 0 1400 640,
+// svgX = 700 + 500·x, svgY = 600 − 500·y. Contrato de props:
+//   viewBox?: string  recorte (WP5 lo usa para las cuatro «fotos» del parte sin WebGL)
+//   plataformaY?: number  0 (enrasada) o 0.35 (arriba), estático
+//   conCalzo?: boolean
+//   class?: string
+//   etiqueta?: string  aria-label; por defecto «Moto de perfil, dibujo técnico»
+interface Props { viewBox?: string; plataformaY?: number; conCalzo?: boolean; class?: string; etiqueta?: string }
+const { viewBox = '0 0 1400 640', class: cls, etiqueta = 'Moto de perfil, dibujo técnico' } = Astro.props;
+---
+<svg class:list={['moto-linea', cls]} viewBox={viewBox} role="img" aria-label={etiqueta}></svg>
