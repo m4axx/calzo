@@ -1,0 +1,89 @@
+---
+// Banda ambar: el tercer registro de la pagina (papel / tinta / ambar) y el
+// color del panel de transporte especial. El argumento del seguro es el unico
+// que un comparador no puede dar, porque no sabe que transportista te toca.
+const datos = [
+  { n: '60.000 €', t: 'Valor declarado cubierto por servicio' },
+  { n: 'MDPE', t: 'Tarjeta de transporte para terceros' },
+  { n: '48 h', t: 'Autorización especial tramitada' },
+];
+---
+
+<section class="seguro" id="seguro">
+  <div class="wrap">
+    <div class="seguro__head rise">
+      <p class="tag">04 &nbsp;/&nbsp; Garantías</p>
+      <h2 class="display h-lg">
+        La póliza normal<br />te paga por kilos.
+      </h2>
+    </div>
+
+    <div class="seguro__body rise" style="--d:100ms">
+      <p class="lede">
+        Así funciona el seguro de mercancías estándar: indemniza por peso. Una
+        moto clásica de 40.000 € pesa 200 kg, y con esa póliza cobras lo que
+        pesa, no lo que vale.
+      </p>
+      <p class="lede">
+        <strong>Aquí se contrata por valor declarado.</strong> Nos dices cuánto
+        vale, entra en el precio, y si pasa algo se paga eso. Sin letra pequeña
+        y sin peritos discutiendo kilos.
+      </p>
+    </div>
+
+    <dl class="seguro__datos rise" style="--d:180ms">
+      {datos.map((d) => (
+        <div>
+          <dt class="num">{d.n}</dt>
+          <dd>{d.t}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>
+
+<style>
+  .seguro {
+    background: var(--amber);
+    color: var(--ink);
+    padding-block: clamp(4.5rem, 9vw, 8rem);
+    border-block: 1px solid var(--ink);
+  }
+  .seguro__head { margin-bottom: 2.4rem; }
+  .seguro__head .tag { color: color-mix(in srgb, var(--ink) 62%, transparent); margin: 0 0 1.4rem; }
+
+  .seguro__body {
+    display: grid;
+    gap: 1.3rem;
+    max-width: 70ch;
+  }
+  @media (min-width: 880px) {
+    .seguro__body { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem; max-width: none; }
+  }
+  .seguro__body .lede { color: color-mix(in srgb, var(--ink) 82%, transparent); max-width: none; }
+  .seguro__body strong { color: var(--ink); }
+
+  .seguro__datos {
+    margin: clamp(3rem, 5vw, 4.5rem) 0 0;
+    padding-top: 2rem;
+    border-top: 1px solid var(--ink);
+    display: grid;
+    gap: 2rem;
+  }
+  @media (min-width: 720px) {
+    .seguro__datos { grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
+  }
+  .seguro__datos dt {
+    font-size: clamp(2.1rem, 1.5rem + 2.2vw, 3.1rem);
+    margin-bottom: 0.5rem;
+  }
+  .seguro__datos dd {
+    margin: 0;
+    font-family: var(--f-mono);
+    font-size: 0.73rem;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: color-mix(in srgb, var(--ink) 72%, transparent);
+    max-width: 24ch;
+  }
+</style>

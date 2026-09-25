@@ -1,0 +1,76 @@
+---
+const enlaces = [
+  { href: '#carga', texto: 'Qué movemos' },
+  { href: '#parte', texto: 'El parte' },
+  { href: '#rutas', texto: 'Rutas' },
+  { href: '#seguro', texto: 'Garantías' },
+];
+---
+
+<header class="nav">
+  <div class="wrap nav__in">
+    <a class="marca" href="/" aria-label="Calzo, inicio">
+      <svg viewBox="0 0 32 32" aria-hidden="true" width="26" height="26">
+        <circle cx="16" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="2.6" />
+        <path d="M4 27 L15 27 L9 20 Z" fill="currentColor" />
+        <path d="M28 27 L17 27 L23 20 Z" fill="currentColor" />
+      </svg>
+      <span class="marca__txt">Calzo</span>
+    </a>
+
+    <nav class="nav__links" aria-label="Secciones">
+      {enlaces.map((e) => <a href={e.href}>{e.texto}</a>)}
+    </nav>
+
+    <a class="nav__tel mono" href="tel:+34600000000">
+      <span class="nav__dot" aria-hidden="true"></span>600 000 000
+    </a>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    /* Fondo solido a proposito. Con backdrop-filter la barra crea una capa
+       de composicion que en algunas GPU deja de pintar el contenido de
+       debajo. El nav es del mismo color que la pagina: el desenfoque no
+       aportaba nada y el riesgo de pagina en blanco no compensa. */
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav__in {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 2rem; height: 68px;
+  }
+  .marca {
+    display: inline-flex; align-items: center; gap: .6rem;
+    text-decoration: none; color: var(--ink);
+  }
+  .marca__txt {
+    font-weight: 800; font-stretch: 118%; font-size: 1.32rem;
+    letter-spacing: -.02em;
+  }
+  .nav__links { display: none; gap: 2rem; }
+  .nav__links a {
+    font-family: var(--f-mono); font-size: .73rem; letter-spacing: .1em;
+    text-transform: uppercase; text-decoration: none; color: var(--ink-2);
+    padding-block: .4rem; border-bottom: 1px solid transparent;
+    transition: color .2s var(--ease), border-color .2s var(--ease);
+  }
+  .nav__links a:hover { color: var(--ink); border-bottom-color: var(--amber); }
+  .nav__tel {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .8rem; font-weight: 500; text-decoration: none; white-space: nowrap;
+  }
+  .nav__dot {
+    width: 7px; height: 7px; background: var(--amber); border-radius: 50%;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 70%, transparent);
+    animation: late 2.6s var(--ease) infinite;
+  }
+  @keyframes late {
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 70%, transparent); }
+    70%  { box-shadow: 0 0 0 9px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  @media (min-width: 940px) { .nav__links { display: flex; } }
+</style>

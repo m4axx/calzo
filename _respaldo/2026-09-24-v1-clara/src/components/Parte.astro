@@ -1,0 +1,172 @@
+---
+// Seccion oscura a proposito: rompe el ritmo de la pagina justo donde se
+// habla del miedo del cliente. Los huecos de foto son marcos tecnicos, no
+// imagenes de relleno — cuando haya fotos reales, entran aqui sin tocar nada.
+const vistas = [
+  { id: 'A', txt: 'Frontal' },
+  { id: 'B', txt: 'Lateral dcho.' },
+  { id: 'C', txt: 'Lateral izq.' },
+  { id: 'D', txt: 'Daños previos' },
+];
+
+const hitos = [
+  { h: '08:14', t: 'Recogida', d: 'Cuatro fotos, kilometraje y daños previos firmados por el cliente.' },
+  { h: '11:02', t: 'En ruta', d: 'Enlace de seguimiento activo. Se ve dónde está sin llamar a nadie.' },
+  { h: '16:40', t: 'Entrega', d: 'Mismas cuatro fotos. Si algo cambió, se ve. Si no, tampoco hay discusión.' },
+];
+---
+
+<section class="parte" id="parte">
+  <div class="wrap">
+    <div class="parte__head rise">
+      <p class="tag">02 &nbsp;/&nbsp; El parte</p>
+      <h2 class="display h-lg">
+        La pregunta es siempre<br />la misma: <span class="q">¿y si me lo rayan?</span>
+      </h2>
+      <p class="lede">
+        Por eso tu moto o tu barco se fotografía al subir y al bajar. Recibes un
+        PDF con hora, matrícula y firma. No es un extra: es cómo se elimina la
+        discusión antes de que exista.
+      </p>
+    </div>
+
+    <div class="parte__grid">
+
+      <div class="ficha rise" style="--d:80ms">
+        <div class="ficha__top">
+          <span class="mono">PARTE DE ESTADO · 0001</span>
+          <span class="ficha__chip">CARGA</span>
+        </div>
+        <div class="ficha__shots">
+          {vistas.map((v) => (
+            <figure class="shot">
+              <svg viewBox="0 0 100 74" aria-hidden="true">
+                <rect x="1" y="1" width="98" height="72" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4" opacity=".45" />
+                <path d="M50 28 v18 M41 37 h18" stroke="currentColor" stroke-width="1" opacity=".45" />
+                <circle cx="50" cy="37" r="13" fill="none" stroke="currentColor" stroke-width="1" opacity=".45" />
+              </svg>
+              <figcaption class="mono">{v.id} · {v.txt}</figcaption>
+            </figure>
+          ))}
+        </div>
+        <div class="ficha__foot mono">
+          <span>Firmado por el cliente</span><span>08:14</span>
+        </div>
+      </div>
+
+      <ol class="hitos rise" style="--d:160ms">
+        {hitos.map((m) => (
+          <li>
+            <span class="hitos__h mono">{m.h}</span>
+            <div>
+              <h3>{m.t}</h3>
+              <p>{m.d}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+    </div>
+  </div>
+</section>
+
+<style>
+  .parte {
+    background: var(--ink);
+    color: var(--paper);
+    padding-block: clamp(4.5rem, 9vw, 9rem);
+  }
+  .parte__head { max-width: 60ch; }
+  .parte__head .tag { color: color-mix(in srgb, var(--paper) 55%, transparent); margin: 0 0 1.4rem; }
+  .parte__head h2 { margin-bottom: 1.4rem; }
+  .parte__head .lede { color: color-mix(in srgb, var(--paper) 72%, transparent); max-width: 52ch; }
+  .q { color: var(--amber); }
+
+  .parte__grid {
+    margin-top: clamp(3rem, 6vw, 5rem);
+    display: grid;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+    align-items: start;
+  }
+  @media (min-width: 940px) {
+    .parte__grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+  }
+
+  /* --- la ficha --------------------------------------------------------- */
+
+  .ficha {
+    border: 1px solid color-mix(in srgb, var(--paper) 26%, transparent);
+    background: color-mix(in srgb, var(--paper) 5%, transparent);
+  }
+  .ficha__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--paper) 26%, transparent);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+  }
+  .ficha__chip {
+    background: var(--amber);
+    color: var(--ink);
+    padding: 0.2rem 0.5rem;
+    font-family: var(--f-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+  }
+  .ficha__shots {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: color-mix(in srgb, var(--paper) 18%, transparent);
+  }
+  .shot {
+    margin: 0;
+    padding: 1rem 1rem 0.7rem;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .shot svg { width: 100%; height: auto; }
+  .shot figcaption {
+    margin-top: 0.6rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--paper) 55%, transparent);
+  }
+  .ficha__foot {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.8rem 1.1rem;
+    border-top: 1px solid color-mix(in srgb, var(--paper) 26%, transparent);
+    font-size: 0.66rem;
+    color: color-mix(in srgb, var(--paper) 60%, transparent);
+  }
+
+  /* --- hitos ------------------------------------------------------------ */
+
+  .hitos { list-style: none; margin: 0; padding: 0; display: grid; }
+  .hitos li {
+    display: grid;
+    grid-template-columns: 4.6rem minmax(0, 1fr);
+    gap: 1.4rem;
+    padding: 1.6rem 0;
+    border-top: 1px solid color-mix(in srgb, var(--paper) 20%, transparent);
+  }
+  .hitos li:last-child { border-bottom: 1px solid color-mix(in srgb, var(--paper) 20%, transparent); }
+  .hitos__h { font-size: 0.8rem; color: var(--amber); padding-top: 0.25rem; }
+  .hitos h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.22rem;
+    font-weight: 700;
+    font-stretch: 108%;
+    letter-spacing: -0.015em;
+  }
+  .hitos p {
+    margin: 0;
+    font-size: 0.93rem;
+    line-height: 1.6;
+    color: color-mix(in srgb, var(--paper) 68%, transparent);
+  }
+</style>

@@ -1,0 +1,3 @@
+# Mientras la empresa no exista. Quitar el dia del alta.
+User-agent: *
+Disallow: /

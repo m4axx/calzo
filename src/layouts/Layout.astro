@@ -1,0 +1,61 @@
+---
+import '../styles/global.css';
+
+interface Props { title: string; description: string; }
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Marca que hay JS antes del primer pintado. Las animaciones de entrada
+         solo se activan con esta clase: sin JS la pagina se ve entera, en vez
+         de quedarse en blanco. -->
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- NOINDEX A PROPOSITO.
+         La empresa todavia no existe: sin CIF no se puede contratar nada.
+         Que Google indexe ahora un negocio no contratable es empezar con
+         deuda. Se quita esta linea y el public/robots.txt el dia del alta. -->
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_ES" />
+  </head>
+
+  <body>
+    <slot />
+
+    <script>
+      // Aparicion al entrar en pantalla. Una sola vez: nada de elementos que
+      // se desvanecen al volver a subir, que es lo que delata el efecto.
+      const io = new IntersectionObserver(
+        (entradas) => {
+          for (const e of entradas) {
+            if (e.isIntersecting) {
+              e.target.classList.add('seen');
+              io.unobserve(e.target);
+            }
+          }
+        },
+        { rootMargin: '0px 0px -12% 0px', threshold: 0.08 }
+      );
+      document.querySelectorAll('.rise').forEach((el) => io.observe(el));
+    </script>
+  </body>
+</html>

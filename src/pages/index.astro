@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import Cargas from '../components/Cargas.astro';
+import Parte from '../components/Parte.astro';
+import Rutas from '../components/Rutas.astro';
+import Seguro from '../components/Seguro.astro';
+import Contacto from '../components/Contacto.astro';
+
+const title = 'Calzo · Transporte de motos, quads y embarcaciones desde Madrid';
+const description =
+  'Transporte de motos, quads y barcos por carretera. Salidas desde Madrid a toda España, parte de fotos al cargar y al entregar, y seguro por valor declarado.';
+---
+
+<Layout title={title} description={description}>
+  <Nav />
+  <main>
+    <Hero />
+    <Cargas />
+    <Parte />
+    <Rutas />
+    <Seguro />
+    <Contacto />
+  </main>
+</Layout>

@@ -1,0 +1,380 @@
+---
+import { DESTINOS, CARGAS, ORIGEN } from '../data/tarifas.js';
+---
+
+<section class="hero">
+  <div class="wrap hero__in">
+
+    <div class="hero__say">
+      <p class="tag rise">Transporte especial · {ORIGEN} · toda España</p>
+
+      <h1 class="display h-xl rise" style="--d:60ms">
+        Se sube atado.<br />Se baja <span class="mark">igual</span>.
+      </h1>
+
+      <p class="lede rise" style="--d:140ms">
+        Motos, quads y embarcaciones. Salimos de {ORIGEN} a cualquier punto de
+        España, con parte de fotos al cargar y al entregar. El precio lo ves
+        antes de descolgar el teléfono.
+      </p>
+
+      <ul class="proof rise" style="--d:220ms">
+        <li>
+          <span class="num">2,55</span>
+          <span class="tag">m de ancho: el límite sin permiso especial</span>
+        </li>
+        <li>
+          <span class="num">&lt;60</span>
+          <span class="tag">segundos hasta tu presupuesto</span>
+        </li>
+        <li>
+          <span class="num">100%</span>
+          <span class="tag">del valor declarado, asegurado</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- La calculadora es el producto, no un formulario de contacto.
+         El comparador te mete en una subasta a ciegas; aqui sale un numero. -->
+    <div class="calc rise" style="--d:300ms">
+      <div class="calc__top">
+        <span class="tag">Presupuesto orientativo</span>
+        <span class="calc__chip" aria-hidden="true"></span>
+      </div>
+
+      <fieldset class="calc__row">
+        <legend class="tag">Qué mueves</legend>
+        <div class="seg seg--4">
+          {CARGAS.map((c, i) => (
+            <label class="seg__op">
+              <input
+                type="radio"
+                name="carga"
+                value={c.id}
+                checked={i === 0}
+                data-base={c.base}
+                data-rate={c.km}
+                data-min={c.min}
+              />
+              <span>{c.nombre}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset class="calc__row">
+        <legend class="tag">Ruta</legend>
+        <div class="ruta">
+          <span class="ruta__a mono">{ORIGEN}</span>
+          <span class="ruta__x" aria-hidden="true">&#8646;</span>
+          <select id="destino" aria-label="Destino">
+            {DESTINOS.map((d, i) => (
+              <option
+                value={d.id}
+                data-km={d.km}
+                data-mar={d.maritimo ? 1 : 0}
+                selected={i === 3}
+              >{d.nombre}</option>
+            ))}
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset class="calc__row calc__barco" hidden>
+        <legend class="tag">Medidas del barco</legend>
+        <div class="eslora">
+          <input
+            type="range" id="eslora" min="4" max="12" step="0.2" value="6.4"
+            aria-label="Eslora en metros"
+          />
+          <output class="mono" id="esloraOut">6,4 m</output>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="manga" />
+          <span>Manga superior a 2,55 m</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="calc__row">
+        <legend class="tag">Viaje</legend>
+        <div class="seg seg--2">
+          <label class="seg__op">
+            <input type="radio" name="viaje" value="ida" checked />
+            <span>Solo ida</span>
+          </label>
+          <label class="seg__op">
+            <input type="radio" name="viaje" value="vuelta" />
+            <span>Ida y vuelta</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="calc__out">
+        <span class="tag">Desde</span>
+        <p class="calc__eur num" id="precio">—</p>
+        <p class="calc__meta mono" id="meta"></p>
+      </div>
+
+      <!-- Solo aparece cuando el barco pasa de 2,55 m. Ningun competidor
+           avisa de esto, y es justo lo que decide el precio del porte. -->
+      <div class="aviso" id="aviso" hidden>
+        <strong>Requiere autorización complementaria de circulación.</strong>
+        La tramitamos nosotros. Suma plazo y coste, y ya va incluido arriba.
+      </div>
+
+      <a class="btn btn--amber calc__cta" href="#contacto">
+        Confirmar por WhatsApp
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <path
+            d="M1 7h11M8 3l4 4-4 4" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+          />
+        </svg>
+      </a>
+
+      <p class="calc__legal">
+        Precio orientativo sobre distancia y tipo de carga. Se confirma al ver
+        el punto de recogida.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+
+  const SALIDAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'];
+  const IDA_VUELTA = 1.65; // la vuelta no cuesta otra ida
+  const RECARGO_ESPECIAL = 0.35;
+  const RECARGO_MARITIMO = 320;
+  const VELOCIDAD = 75; // km/h de conjunto cargado, con paradas
+
+  const eur = new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  });
+
+  function calcular() {
+    const carga = document.querySelector('input[name="carga"]:checked');
+    const destino = $('#destino').selectedOptions[0];
+    const vuelta =
+      document.querySelector('input[name="viaje"]:checked').value === 'vuelta';
+
+    const esBarco = carga.value === 'barco';
+    const mangaAncha = esBarco && $('#manga').checked;
+
+    // Las medidas solo se piden cuando cambian algo.
+    $('.calc__barco').hidden = !esBarco;
+
+    const km = Number(destino.dataset.km);
+    const maritimo = destino.dataset.mar === '1';
+
+    let precio = Number(carga.dataset.base) + km * Number(carga.dataset.rate);
+    precio = Math.max(precio, Number(carga.dataset.min));
+
+    // Un barco largo ocupa mas plataforma aunque no sea ancho.
+    if (esBarco) {
+      const eslora = Number($('#eslora').value);
+      precio *= 1 + Math.max(0, eslora - 6) * 0.06;
+      $('#esloraOut').textContent = eslora.toFixed(1).replace('.', ',') + ' m';
+    }
+
+    if (mangaAncha) precio *= 1 + RECARGO_ESPECIAL;
+    if (vuelta) precio *= IDA_VUELTA;
+    if (maritimo) precio += RECARGO_MARITIMO;
+
+    precio = Math.round(precio / 5) * 5;
+
+    const horas = Math.max(1, Math.round((km * (vuelta ? 2 : 1)) / VELOCIDAD));
+    const salida = SALIDAS[(km + new Date().getDate()) % SALIDAS.length];
+
+    $('#precio').textContent = eur.format(precio);
+    $('#meta').textContent =
+      km.toLocaleString('es-ES') +
+      ' km · ~' + horas + ' h en carretera · próxima salida ' + salida +
+      (maritimo ? ' · incluye ferry' : '');
+    $('#aviso').hidden = !mangaAncha;
+  }
+
+  document.querySelectorAll('.calc input, .calc select').forEach((el) => {
+    el.addEventListener('input', calcular);
+    el.addEventListener('change', calcular);
+  });
+
+  calcular();
+</script>
+
+<style>
+  .hero { padding-block: clamp(3rem, 7vw, 6.5rem) clamp(4rem, 8vw, 7rem); }
+  .hero__in { display: grid; gap: clamp(3rem, 6vw, 5rem); align-items: start; }
+  @media (min-width: 1060px) {
+    .hero__in {
+      grid-template-columns: minmax(0, 1.15fr) minmax(370px, 0.85fr);
+      gap: clamp(3rem, 5vw, 6rem);
+    }
+  }
+
+  .hero__say .tag { margin: 0 0 1.6rem; }
+  .hero__say h1 { margin-bottom: 1.8rem; }
+
+  /* Subrayado ambar, no fondo: deja respirar la letra. */
+  .mark {
+    background: linear-gradient(
+      transparent 60%,
+      var(--amber) 60%,
+      var(--amber) 93%,
+      transparent 93%
+    );
+  }
+
+  .proof {
+    list-style: none;
+    margin: 2.6rem 0 0;
+    padding: 1.6rem 0 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 1.4rem;
+  }
+  @media (min-width: 620px) {
+    .proof { grid-template-columns: repeat(3, 1fr); gap: 1.6rem; }
+  }
+  .proof li { display: grid; gap: 0.45rem; align-content: start; }
+  .proof .num { font-size: clamp(1.7rem, 1.2rem + 1.5vw, 2.3rem); }
+  .proof .tag {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  /* --- calculadora ------------------------------------------------------ */
+
+  .calc {
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
+    box-shadow: 14px 14px 0 rgba(20, 20, 15, 0.07);
+  }
+  .calc__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.4rem;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .calc__top .tag { color: color-mix(in srgb, var(--paper) 72%, transparent); }
+  .calc__chip { width: 13px; height: 13px; background: var(--amber); }
+
+  .calc__row {
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    margin: 0;
+    padding: 1.15rem 1.4rem;
+  }
+  .calc__row legend { padding: 0; margin-bottom: 0.75rem; }
+
+  .seg { display: grid; gap: 6px; }
+  .seg--4 { grid-template-columns: repeat(2, 1fr); }
+  .seg--2 { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 420px) { .seg--4 { grid-template-columns: repeat(4, 1fr); } }
+
+  .seg__op input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg__op span {
+    display: block;
+    text-align: center;
+    padding: 0.6rem 0.3rem;
+    border: 1px solid var(--line-strong);
+    cursor: pointer;
+    font-family: var(--f-mono);
+    font-size: 0.69rem;
+    letter-spacing: 0.04em;
+    transition: background 0.18s var(--ease), color 0.18s var(--ease);
+  }
+  .seg__op span:hover { background: var(--paper-3); }
+  .seg__op input:checked + span {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .seg__op input:focus-visible + span {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  .ruta { display: flex; align-items: center; gap: 0.85rem; }
+  .ruta__a { font-size: 0.95rem; font-weight: 500; }
+  .ruta__x { color: var(--ink-3); }
+  .ruta select {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    padding: 0.6rem 2rem 0.6rem 0.7rem;
+    border: 1px solid var(--line-strong);
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-mono);
+    font-size: 0.85rem;
+    cursor: pointer;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+      linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+    background-position: calc(100% - 17px) 55%, calc(100% - 12px) 55%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .eslora { display: flex; align-items: center; gap: 1rem; }
+  .eslora input { flex: 1; accent-color: var(--ink); }
+  .eslora output {
+    font-size: 0.85rem;
+    font-weight: 500;
+    min-width: 4.2rem;
+    text-align: right;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.85rem;
+    font-size: 0.84rem;
+    cursor: pointer;
+  }
+  .check input { accent-color: var(--amber); width: 16px; height: 16px; }
+
+  .calc__out { padding: 1.35rem 1.4rem 1.5rem; }
+  .calc__eur {
+    font-size: clamp(2.8rem, 2rem + 3vw, 3.9rem);
+    margin: 0.35rem 0 0.55rem;
+  }
+  .calc__meta {
+    font-size: 0.73rem;
+    color: var(--ink-3);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .aviso {
+    margin: 0 1.4rem 1.2rem;
+    padding: 0.85rem 1rem;
+    background: var(--amber);
+    border-left: 4px solid var(--ink);
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+  .aviso strong { display: block; }
+
+  .calc__cta {
+    display: flex;
+    width: calc(100% - 2.8rem);
+    margin: 0 1.4rem;
+    justify-content: space-between;
+  }
+  .calc__legal {
+    margin: 1rem 1.4rem 1.4rem;
+    font-size: 0.7rem;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+</style>
