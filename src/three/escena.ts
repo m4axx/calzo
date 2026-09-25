@@ -3,9 +3,9 @@
 // recompilar, visibilidad del canvas y la implementación de EscenaAPI.
 // Todo este módulo vive en el chunk 3D (import() desde escena-loader.ts).
 import * as THREE from 'three';
-// FUENTE_MOTO (§4.11): cambiar de moto es esta línea. Al integrar WP1:
-//   import { crearMoto as FUENTE_MOTO } from './moto/crearMoto.ts';
-import { crearMotoMaqueta as FUENTE_MOTO } from './maqueta.ts';
+// FUENTE_MOTO (§4.11): cambiar de moto es esta línea. Maqueta de cajas:
+//   import { crearMotoMaqueta as FUENTE_MOTO } from './maqueta.ts';
+import { crearMoto as FUENTE_MOTO } from './moto/crearMoto.ts';
 import type { Tier, PresetId, UniformsCompartidos, AnclaPlataformaId } from './contrato-tipos.ts';
 import type { Cincha2D, Punto } from '../lib/estado.ts';
 import { estado, on } from '../lib/estado.ts';

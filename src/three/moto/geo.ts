@@ -255,20 +255,6 @@ export function curvaPuntos(pts: THREE.Vector3[]): THREE.CurvePath<THREE.Vector3
   return c;
 }
 
-/** Catenaria aproximada entre a y b con flecha `f` hacia abajo (latiguillos y cables). */
-export function catenaria(a: THREE.Vector3, b: THREE.Vector3, f: number, n = 12, empuje?: THREE.Vector3): THREE.Vector3[] {
-  const out: THREE.Vector3[] = [];
-  for (let i = 0; i <= n; i++) {
-    const u = i / n;
-    const p = a.clone().lerp(b, u);
-    const s = 4 * u * (1 - u);
-    p.y -= f * Math.pow(s, 0.9);
-    if (empuje) p.addScaledVector(empuje, s);
-    out.push(p);
-  }
-  return out;
-}
-
 // ————————————————————————————————————————————— superficies paramétricas
 
 /**

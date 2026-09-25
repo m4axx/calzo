@@ -38,7 +38,7 @@ export function recorridoCadena(): { tramos: Tramo[]; largo: number } {
   return { tramos, largo: tramos.reduce((s, t) => s + t.largo, 0) };
 }
 
-export function cadena(q: Calidad, l: Lote): void {
+export function cadena(_q: Calidad, l: Lote): void {
   const { tramos, largo } = recorridoCadena();
   const n = 110;
   const mats: THREE.Matrix4[] = [];

@@ -3,7 +3,7 @@
 // tapas, estriberas con estriado, palanca de cambio y pedal de freno.
 import * as THREE from 'three';
 import {
-  cajaR, catenaria, curvaPuntos, ejeHorquilla, extruir, orientar, poligonoRedondo, redondear, rutaCodos, seg,
+  cajaR, curvaPuntos, ejeHorquilla, extruir, orientar, poligonoRedondo, redondear, rutaCodos, seg,
   superficie, torno, tubo, type Calidad, type Grupo, type Lote, type V3,
 } from '../geo.ts';
 
@@ -74,8 +74,9 @@ export function latiguillos(q: Calidad, l: Lote): void {
   // El distribuidor va detrás del plano de las barras, bajo la tija inferior, pegado a la pipa.
   const pd = ejeHorquilla(0.44, -0.052, 0);
   const distrib: V3 = [pd.x, pd.y, 0];
-  const cat = catenaria(new THREE.Vector3(...bomba), new THREE.Vector3(0.43, 0.84, -0.06), 0.025, 6)
-    .concat([new THREE.Vector3(pd.x - 0.02, pd.y + 0.04, -0.02), new THREE.Vector3(...distrib)]);
+  // Baja por detrás de la tija superior (nunca a través de ella) y pasa bajo la inferior.
+  const cat = [bomba, [0.398, 0.93, -0.172], [0.372, 0.86, -0.125], [0.383, 0.78, -0.08], [pd.x - 0.03, pd.y + 0.02, -0.02], distrib]
+    .map((p) => new THREE.Vector3(...(p as V3)));
   l.add('suspendida', 'resto', 'goma_puno', tubo(curvaPuntos(cat), 0.0034, q, { radial: 8, pasos: 48 }));
   racor(q, l, 'suspendida', bomba, [0.2, 1, 0]);
   l.add('suspendida', 'resto', 'aluminio', cajaR(0.02, 0.014, 0.03, 0.004, distrib, q, 2));
@@ -93,9 +94,9 @@ export function latiguillos(q: Calidad, l: Lote): void {
 
   // Cable de embrague (izquierda) y cables de gas (derecha) con su catenaria.
   // Todos pasan por detrás de la pipa, nunca por delante de las barras.
-  cable(q, l, 'suspendida', [[0.425, 0.962, 0.19], [0.41, 0.95, 0.16], [0.425, 0.88, 0.07], [0.43, 0.78, 0.045], [0.36, 0.64, 0.075], [0.22, 0.53, 0.14], [0.10, 0.475, 0.162]]);
-  cable(q, l, 'suspendida', [[0.425, 0.958, -0.205], [0.40, 0.925, -0.14], [0.395, 0.83, -0.06], [0.30, 0.745, -0.066], [0.12, 0.72, -0.064]]);
-  cable(q, l, 'suspendida', [[0.427, 0.952, -0.215], [0.405, 0.92, -0.15], [0.40, 0.82, -0.072], [0.30, 0.737, -0.078], [0.12, 0.712, -0.07]]);
+  cable(q, l, 'suspendida', [[0.425, 0.962, 0.19], [0.40, 0.94, 0.15], [0.39, 0.90, 0.10], [0.392, 0.83, 0.088], [0.39, 0.74, 0.08], [0.34, 0.62, 0.085], [0.22, 0.53, 0.14], [0.10, 0.475, 0.162]]);
+  cable(q, l, 'suspendida', [[0.425, 0.958, -0.205], [0.40, 0.925, -0.14], [0.39, 0.87, -0.10], [0.392, 0.80, -0.082], [0.30, 0.745, -0.066], [0.12, 0.72, -0.064]]);
+  cable(q, l, 'suspendida', [[0.427, 0.952, -0.215], [0.405, 0.92, -0.15], [0.395, 0.865, -0.112], [0.398, 0.795, -0.094], [0.30, 0.737, -0.078], [0.12, 0.712, -0.07]]);
 
 }
 

@@ -83,6 +83,7 @@ const r = calcularPrecio({ carga: 'moto', destino: 'valencia', vuelta: false });
     font: inherit;
     color: var(--hueso);
     cursor: pointer;
+    field-sizing: content; /* ancho del destino elegido, no del más largo */
   }
   .pieza__select select:hover { border-bottom-color: var(--hueso); }
   .pieza__select select option { background: var(--grafito-alto); color: var(--hueso); }

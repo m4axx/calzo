@@ -1,23 +1,24 @@
-// Planos de cámara (§4.9; valores de partida). Solo datos y orientaciones
+// Planos de cámara (§4.9; valores de partida, revisados con la moto real:
+// héroe, cierre, am.bajo y am.horquilla se alejan para que la moto quepa). Solo datos y orientaciones
 // precalculadas: la resolución (encuadre por setViewOffset y encaje compacto)
 // la hace el director, que conoce el rig y el viewport.
 import * as THREE from 'three';
 import type { Plano, PlanoId, Vec3 } from './contrato-tipos.ts';
 
 export const PLANOS: Readonly<Record<PlanoId, Plano>> = {
-  'pieza.a': { pos: [3.10, 0.90, 2.60], mira: [0.00, 0.52, 0.00], fov: 26, punto: 'contactos', encuadre: [0.67, 0.72], encuadreCompacto: [0.5, 0.80], encajeCompacto: 'rig' },
-  'pieza.b': { pos: [2.70, 0.55, 2.20], mira: [0.05, 0.50, 0.00], fov: 24, punto: 'contactos', encuadre: [0.67, 0.72], encuadreCompacto: [0.5, 0.80], encajeCompacto: 'rig' },
-  'am.bajo': { pos: [2.40, 0.55, 2.10], mira: [0.20, 0.35, 0.00], fov: 24, punto: 'origen', encuadre: [0.62, 0.66], encuadreCompacto: [0.5, 0.64], encajeCompacto: 'rig' },
+  'pieza.a': { pos: [4.03, 1.01, 3.38], mira: [0.00, 0.52, 0.00], fov: 26, punto: 'contactos', encuadre: [0.67, 0.72], encuadreCompacto: [0.5, 0.80], encajeCompacto: 'rig' },
+  'pieza.b': { pos: [3.50, 0.57, 2.86], mira: [0.05, 0.50, 0.00], fov: 24, punto: 'contactos', encuadre: [0.67, 0.72], encuadreCompacto: [0.5, 0.80], encajeCompacto: 'rig' },
+  'am.bajo': { pos: [3.39, 0.79, 3.05], mira: [0.20, 0.50, 0.00], fov: 24, punto: 'origen', encuadre: [0.62, 0.76], encuadreCompacto: [0.5, 0.64], encajeCompacto: 'rig' },
   'am.rueda': { pos: [1.95, 0.32, 1.05], mira: [0.80, 0.24, 0.00], fov: 22, punto: 'hs_rueda', encuadre: [0.64, 0.52], encuadreCompacto: [0.5, 0.62], encajeCompacto: null, masA: true },
   'am.calzo': { pos: [1.85, 0.32, 0.95], mira: [0.85, 0.15, 0.00], fov: 22, punto: 'anc_calzo', encuadre: [0.64, 0.62], encuadreCompacto: [0.5, 0.66], encajeCompacto: null, masA: true },
   'am.tija': { pos: [1.25, 1.05, 0.70], mira: [0.50, 0.80, 0.02], fov: 20, punto: 'hs_tija', encuadre: [0.64, 0.50], encuadreCompacto: [0.5, 0.60], encajeCompacto: null, masA: true },
-  'am.delanteras': { pos: [2.35, 0.85, 1.75], mira: [0.85, 0.40, 0.00], fov: 24, punto: 'mira', encuadre: [0.62, 0.52], encuadreCompacto: [0.5, 0.60], encajeCompacto: 'rig', masA: true },
+  'am.delanteras': { pos: [2.35, 0.85, 1.75], mira: [0.85, 0.40, 0.00], fov: 24, punto: 'mira', encuadre: [0.62, 0.52], encuadreCompacto: [0.64, 0.60], encajeCompacto: 'rig', masA: true },
   'am.traseras': {
     pos: { de: [0.60, 0.75, -3.10], a: [-0.60, 0.75, -3.10] },
     mira: { de: [0.10, 0.40, 0.00], a: [-0.55, 0.38, 0.00] },
     fov: 26, punto: 'mira', encuadre: [0.55, 0.55], encuadreCompacto: [0.5, 0.60], encajeCompacto: 'rig', masA: true,
   },
-  'am.horquilla': { pos: [1.30, 0.60, -1.20], mira: [0.62, 0.52, -0.10], fov: 18, punto: 'hs_horquilla', encuadre: [0.60, 0.50], encuadreCompacto: [0.5, 0.58], encajeCompacto: null, masA: true },
+  'am.horquilla': { pos: [1.78, 0.66, -1.97], mira: [0.62, 0.52, -0.10], fov: 18, punto: 'hs_horquilla', encuadre: [0.60, 0.50], encuadreCompacto: [0.5, 0.58], encajeCompacto: null, masA: true },
   'am.grua1': { pos: [2.00, 2.60, -1.20], mira: [0.00, 0.30, 0.00], fov: 28, punto: 'origen', encuadre: [0.5, 0.5], encajeCompacto: 'x', masA: true },
   'am.cenital': {
     pos: [0.00, 5.50, 0.00], mira: [0.00, 0.00, 0.00], fov: 30, punto: 'origen',
@@ -30,8 +31,8 @@ export const PLANOS: Readonly<Record<PlanoId, Plano>> = {
   'parte.D': { pos: [2.30, 0.80, -2.00], mira: [0.30, 0.52, 0.00], fov: 26, punto: [0, 0.5, 0], encuadre: [0.5, 0.5], encajeCompacto: null, masA: true },
   // La rima con el héroe: pieza.b subido 17,5 cm. El punto es fijo en el mundo:
   // la moto empieza por encima de él (plataforma arriba) y acaba por debajo.
-  'cierre.a': { pos: [2.70, 0.725, 2.20], mira: [0.05, 0.675, 0.00], fov: 24, punto: [0, 0.175, 0], encuadre: [0.66, 0.62], encuadreCompacto: [0.5, 0.70], encajeCompacto: 'rig' },
-  'cierre.b': { pos: [2.62, 0.725, 2.13], mira: [0.05, 0.675, 0.00], fov: 24, punto: [0, 0.175, 0], encuadre: [0.66, 0.62], encuadreCompacto: [0.5, 0.70], encajeCompacto: 'rig' },
+  'cierre.a': { pos: [3.50, 0.74, 2.86], mira: [0.05, 0.675, 0.00], fov: 24, punto: [0, 0.175, 0], encuadre: [0.66, 0.62], encuadreCompacto: [0.5, 0.70], encajeCompacto: 'rig' },
+  'cierre.b': { pos: [3.39, 0.74, 2.77], mira: [0.05, 0.675, 0.00], fov: 24, punto: [0, 0.175, 0], encuadre: [0.66, 0.62], encuadreCompacto: [0.5, 0.70], encajeCompacto: 'rig' },
 };
 
 /** Spline izquierdo y derecho del amarre (§4.9). Entre ellos, el corte seco de traseras. */

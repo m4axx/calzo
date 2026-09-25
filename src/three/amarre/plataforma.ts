@@ -62,7 +62,7 @@ export function crearMaterialesAmarre(renderer: THREE.WebGLRenderer, tier: Tier,
   lagrimado.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
   const plataforma = new THREE.MeshPhysicalMaterial({
-    color: '#8E9194', metalness: 1, roughness: 0.34, normalMap: lagrimado, anisotropy: 0.4,
+    color: '#6E7174', metalness: 1, roughness: 0.5, normalMap: lagrimado, anisotropy: 0.4, // más mate que §4.5: con clave 1 la chapa se comía la moto
   });
   inyectarAtenuacion(plataforma, U, 'plataforma');
   const anodizado = new THREE.MeshPhysicalMaterial({ color: '#1D1F21', metalness: 0.6, roughness: 0.42 });

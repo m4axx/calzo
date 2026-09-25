@@ -98,7 +98,7 @@ import MotoPlanta from './svg/MotoPlanta.astro';
   }
   :global(html.js:not(.reducido)) .amarre__pasos { display: block; }
   :global(html.js:not(.reducido)) .amarre__quieto { display: none; }
-  :global(html.js:not(.reducido)) .amarre__paso { display: grid; }
+  :global(html.js:not(.reducido)) .amarre__paso { display: grid; grid-template-columns: 1fr; }
   :global(html.js:not(.reducido)) .amarre__titulo {
     top: 18svh; left: var(--izq); margin: 0;
     width: calc(5 * var(--col) + 4 * var(--gutter)); max-width: none;
