@@ -1,6 +1,49 @@
 ---
-// STUB de WP0 — lo completa WP5 (§2.6).
+// 06 · Seguro (§2.6). Dueño: WP5. Calma tipográfica: H2, un párrafo y una
+// cifra. Sin JS y sin entrada animada. La cifra sale de contacto.js, que es
+// provisional hasta tener la póliza firmada.
+import { SEGURO_MAX_EUR } from '../data/contacto.js';
+import { formatoEuros } from '../lib/precio.js';
+
+const cifra = formatoEuros(SEGURO_MAX_EUR);
 ---
 <section id="seguro" class="cap cap--grafito cap--flujo" data-cap="seguro" aria-labelledby="seguro-h">
-  <div class="rejilla"><h2 id="seguro-h" class="h2" style="grid-column: 1 / -1">Asegurada por lo que vale.</h2></div>
+  <div class="rejilla seguro">
+    <h2 id="seguro-h" class="h2 seguro__h">Asegurada por lo que vale.</h2>
+    <p class="cuerpo seguro__cuerpo">La póliza estándar de mercancías paga por kilo transportado, y una moto no vale lo que pesa. La nuestra cubre el valor que declares al reservar.</p>
+    <div class="seguro__dato">
+      <p class="seguro__cifra"><span class="seguro__pre">Hasta</span> <span class="seguro__num">{cifra}</span> <span class="seguro__post">por servicio</span></p>
+      <p class="nota">Cifra provisional</p>
+    </div>
+  </div>
 </section>
+
+<style>
+  .seguro { row-gap: var(--e-2); align-items: start; }
+  .seguro__h { grid-column: 1 / -1; }
+  .seguro__cuerpo { grid-column: 1 / -1; color: var(--hueso); }
+  /* cuerpo y cifra arrancan en la misma raya, como dos columnas de un impreso */
+  .seguro__cuerpo, .seguro__dato { padding-top: 1.25rem; border-top: var(--borde); }
+  .seguro__dato { grid-column: 1 / -1; }
+  @media (min-width: 768px) {
+    .seguro__h { grid-column: 1 / 9; }
+    .seguro__cuerpo { grid-column: 1 / 7; }
+    .seguro__dato { grid-column: 8 / 13; }
+  }
+  .seguro__cifra {
+    font-family: var(--f-cifras);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--hueso);
+    font-size: var(--t-cifra);
+    line-height: 1.4;
+  }
+  .seguro__num {
+    display: block;
+    font-size: var(--t-h3);
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    margin-block: .15em .1em;
+  }
+  .seguro__cifra + .nota { margin-top: .75rem; }
+</style>

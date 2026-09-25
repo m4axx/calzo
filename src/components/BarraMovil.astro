@@ -1,4 +1,57 @@
 ---
-// STUB de WP0 — lo completa WP4 (§7.2).
+// Barra inferior en compacto (§7.2). Dueño: WP4.
+// Precio + WhatsApp desde el final del héroe. El botón es de contorno hasta el
+// traspaso y a partir de ahí se tiñe de cincha: el naranja llega con las cinchas.
+import { calcularPrecio, urlWhatsApp } from '../lib/precio.js';
+import { CARGAS, DESTINOS, CARGA_DEFECTO, DESTINO_DEFECTO } from '../data/tarifas.js';
+
+type CargaId = 'moto' | 'quad' | 'barco' | 'coche';
+const r = calcularPrecio({ carga: CARGA_DEFECTO as CargaId, destino: DESTINO_DEFECTO, vuelta: false });
+const que = `${CARGAS.find((c) => c.id === r.entrada.carga)!.nombre} a ${DESTINOS.find((d) => d.id === r.entrada.destino)!.nombre}`;
 ---
-<div id="barra-movil" hidden></div>
+
+<div id="barra-movil" class="barra">
+  <a class="barra__lectura" href="#precio">
+    <span class="barra__total" data-precio="total">{r.totalTxt}</span>
+    <span class="barra__sep" aria-hidden="true">·</span>
+    <span class="barra__que" data-barra-que>{que}</span>
+  </a>
+  <a class="barra__wa" data-wa href={urlWhatsApp(r)}>WhatsApp</a>
+</div>
+
+<style>
+  .barra { display: none; }
+  :global(html.js.compacto) .barra {
+    position: fixed; inset: auto 0 0 0; z-index: var(--z-barra);
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 0 var(--margin) env(safe-area-inset-bottom, 0px);
+    background: var(--grafito);
+    border-top: var(--borde);
+    visibility: hidden;
+    transform: translateY(100%);
+  }
+  /* Aparece y desaparece en seco: la barra es estado, no espectáculo (§1.4). */
+  :global(html.js.compacto) .barra.es-visible { visibility: visible; transform: none; }
+
+  .barra__lectura {
+    display: flex; align-items: baseline; gap: .5rem; min-width: 0; min-height: 48px; align-self: stretch;
+    align-items: center;
+    color: var(--hueso); text-decoration: none;
+  }
+  .barra__total { flex: none; font-family: var(--f-cifras); font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+  .barra__sep { color: var(--ceniza); }
+  .barra__que {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 1rem;
+  }
+  .barra__wa {
+    flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 48px; padding: 0 1.125rem;
+    border: 1px solid var(--hueso); border-radius: var(--r-s);
+    color: var(--hueso); background: transparent; text-decoration: none;
+    font-family: var(--f-display); font-weight: 600; font-size: 1.0625rem; letter-spacing: .02em;
+  }
+  .barra.es-atada .barra__wa { background: var(--cincha); border-color: var(--cincha); color: var(--carbon); }
+</style>

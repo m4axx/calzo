@@ -1,6 +1,104 @@
 ---
-// STUB de WP0 — lo completa WP5 (§2.4).
+// 04 · Quads y barcos (§2.4). Dueño: WP5. Empieza la banda de papel: cargas y
+// parte son una sola superficie impresa (sin borde entre las dos secciones).
+// Dos láminas técnicas con su única entrada por máscara (revelar.ts, stagger
+// 0,12). Los enlaces «Calcular para…» llevan data-fijar-carga: los engancha
+// capitulos/parte.ts (fijar + irA), porque app.ts no inicia un cargas.ts.
+import QuadPlanta from './svg/QuadPlanta.astro';
+import BarcoSeccion from './svg/BarcoSeccion.astro';
+import Flecha from './svg/Flecha.astro';
 ---
-<section id="cargas" class="cap papel cap--flujo" data-cap="cargas" aria-labelledby="cargas-h">
-  <div class="rejilla"><h2 id="cargas-h" class="h2" style="grid-column: 1 / -1">También llevamos quads y barcos.</h2></div>
+<section id="cargas" class="cap papel cap--flujo cargas-cap" data-cap="cargas" aria-labelledby="cargas-h" data-revelar-stagger="0.12">
+  <div class="rejilla cargas">
+    <h2 id="cargas-h" class="h2 cargas__h">También llevamos quads y barcos.</h2>
+
+    <article class="cargas__lamina cargas__lamina--quad" aria-labelledby="cargas-quad-h">
+      <div class="cargas__dibujo">
+        <QuadPlanta revelar />
+      </div>
+      <div class="cargas__texto">
+        <h3 id="cargas-quad-h" class="h3">Quads y UTV</h3>
+        <p class="cuerpo">Cuatro cinchas en cruz y un calzo en cada rueda.</p>
+        <a class="cargas__enlace" href="#precio" data-fijar-carga="quad"><span>Calcular para un quad</span><Flecha /></a>
+      </div>
+    </article>
+
+    <article class="cargas__lamina cargas__lamina--barco" aria-labelledby="cargas-barco-h">
+      <div class="cargas__dibujo">
+        <BarcoSeccion revelar />
+      </div>
+      <div class="cargas__texto">
+        <h3 id="cargas-barco-h" class="h3">Embarcaciones</h3>
+        <p class="cuerpo">Viajan sobre una cuna a medida, apoyadas en la quilla y los pantoques.</p>
+        <p class="nota cargas__nota">Con más de 2,55&nbsp;m de manga hace falta una autorización complementaria de circulación. La tramitamos nosotros y va incluida en el precio.</p>
+        <a class="cargas__enlace" href="#precio" data-fijar-carga="barco"><span>Calcular para un barco</span><Flecha /></a>
+      </div>
+    </article>
+
+    <div class="cargas__coches">
+      <h3 class="cargas__coches-h">Coches</h3>
+      <p class="cargas__coches-t">También llevamos algún coche: pregúntanos.</p>
+    </div>
+  </div>
 </section>
+
+<style>
+  /* La banda de papel sigue sin corte en #parte: entre las dos secciones, el
+     aire mínimo de sección (100 px en móvil, 140 en escritorio) y no el doble. */
+  .cargas-cap { padding-bottom: max(100px, var(--e-4)); }
+  @media (min-width: 1024px) { .cargas-cap { padding-bottom: max(140px, var(--e-4)); } }
+
+  .cargas { row-gap: var(--e-2); align-items: start; }
+  .cargas__h { grid-column: 1 / -1; }
+  .cargas__lamina { grid-column: 1 / -1; display: grid; gap: 1.5rem; }
+  .cargas__coches { grid-column: 1 / -1; }
+  @media (min-width: 768px) {
+    .cargas__h { grid-column: 1 / 10; }
+    .cargas__lamina--quad { grid-column: 1 / 7; }
+    .cargas__lamina--barco { grid-column: 7 / 13; margin-top: 8svh; }
+  }
+
+  .cargas__dibujo {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--tinta);
+  }
+  .cargas__texto { display: grid; gap: .75rem; justify-items: start; max-width: 46ch; }
+  .cargas__texto .cuerpo { color: var(--tinta); }
+  .cargas__nota { max-width: 52ch; font-family: var(--f-texto); font-size: .9375rem; line-height: 1.45; }
+  .cargas__enlace {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: .25rem;
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: var(--t-etiqueta);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--tinta);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: .35em;
+    padding-block: .5rem;
+  }
+  .cargas__enlace:hover { text-decoration-thickness: 2px; }
+
+  .cargas__coches {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .25rem 1rem;
+    margin-top: var(--e-1);
+    padding-top: 1rem;
+    border-top: 1px solid var(--tinta-2);
+  }
+  .cargas__coches-h {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: var(--t-etiqueta);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .cargas__coches-t { font-size: var(--t-cuerpo); }
+</style>

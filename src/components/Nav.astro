@@ -1,6 +1,128 @@
 ---
-// STUB de WP0 — lo completa WP4 (§8.3).
+// Nav (§3.6, §6.1, §8.3). Dueño: WP4.
+// Marca, chip del precio (solo escritorio, desde el final del héroe) y el botón
+// de texto «Índice», que abre un <dialog> nativo en lenguaje de cliente.
+import { calcularPrecio } from '../lib/precio.js';
+import { CARGAS, DESTINOS, CARGA_DEFECTO, DESTINO_DEFECTO } from '../data/tarifas.js';
+
+type CargaId = 'moto' | 'quad' | 'barco' | 'coche';
+const r = calcularPrecio({ carga: CARGA_DEFECTO as CargaId, destino: DESTINO_DEFECTO, vuelta: false });
+const chip = `${CARGAS.find((c) => c.id === r.entrada.carga)!.nombre} · ${DESTINOS.find((d) => d.id === r.entrada.destino)!.nombre} · ${r.totalTxt}`;
+
+const indice: Array<[string, string]> = [
+  ['#pieza', 'Transporte de motos'],
+  ['#amarre', 'Cómo se ata'],
+  ['#precio', 'Precio'],
+  ['#cargas', 'Quads y barcos'],
+  ['#parte', 'Parte con fotos'],
+  ['#seguro', 'Seguro'],
+  ['#rutas', 'Rutas'],
+  ['#contacto', 'Contacto'],
+];
 ---
+
 <header class="nav">
-  <a class="nav__marca" href="#pieza" aria-label="Calzo, inicio">CALZO</a>
+  <div class="nav__fila">
+    <a class="nav__marca" href="#pieza" aria-label="Calzo, inicio">
+      <svg class="nav__simbolo" viewBox="3 4 26 24" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4" />
+        <path d="M4 27 L15 27 L9 20 Z M28 27 L17 27 L23 20 Z" fill="currentColor" />
+      </svg>
+      <span aria-hidden="true">CALZO</span>
+    </a>
+    <div class="nav__acciones">
+      <a class="nav__chip" href="#precio" aria-label={`Precio: ${chip}`}><span class="nav__chip-txt">{chip}</span></a>
+      <button class="nav__indice" type="button" data-indice aria-haspopup="dialog" aria-controls="indice">Índice</button>
+    </div>
+  </div>
 </header>
+
+<dialog id="indice" class="indice" aria-labelledby="indice-titulo">
+  <div class="indice__cabeza">
+    <p id="indice-titulo" class="etiqueta indice__titulo">Índice</p>
+    <button class="indice__cerrar" type="button" data-indice-cerrar>Cerrar</button>
+  </div>
+  <nav aria-labelledby="indice-titulo">
+    <ul class="indice__lista">
+      {indice.map(([href, txt]) => <li><a class="indice__enlace" href={href}>{txt}</a></li>)}
+    </ul>
+  </nav>
+</dialog>
+
+<style>
+  .nav {
+    position: fixed; inset: 0 0 auto 0; z-index: var(--z-nav);
+    height: 56px;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+  }
+  /* Sólida (sin backdrop-filter) cuando el activo no es el héroe (§3.6). */
+  :global(html.nav-solida) .nav, :global(html:not(.js)) .nav {
+    background: rgb(19 22 24 / .92);
+    border-bottom-color: var(--junta);
+  }
+  .nav__fila {
+    height: 100%;
+    max-width: var(--contenedor); margin-inline: auto; padding-inline: var(--margin);
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .nav__marca {
+    display: inline-flex; align-items: center; gap: .5rem;
+    min-height: 44px;
+    color: var(--hueso); text-decoration: none;
+    font-family: var(--f-display); font-size: 20px; font-weight: 560; letter-spacing: .04em; line-height: 1;
+  }
+  .nav__simbolo { width: 22px; height: 22px; }
+  .nav__acciones { display: flex; align-items: center; gap: 1.25rem; }
+
+  .nav__chip {
+    display: none;
+    align-items: center; min-height: 36px; padding: 0 .875rem;
+    border: var(--borde); border-radius: var(--r-s);
+    color: var(--hueso); text-decoration: none;
+    font-family: var(--f-cifras); font-size: .875rem; font-variant-numeric: tabular-nums; white-space: nowrap;
+    opacity: 0; visibility: hidden;
+    transition: opacity .2s var(--ease), visibility 0s linear .2s, border-color .15s var(--ease);
+  }
+  .nav__chip:hover { border-color: var(--aluminio); }
+  /* Chip solo en escritorio y solo desde el final del héroe (lo pone pieza.ts, WP3). */
+  :global(html.js:not(.compacto)) .nav__chip { display: inline-flex; }
+  :global(html.chip-visible) .nav__chip { opacity: 1; visibility: visible; transition: opacity .2s var(--ease), visibility 0s, border-color .15s var(--ease); }
+  :global(html.reducido) .nav__chip { transition: none; }
+
+  .nav__indice {
+    min-height: 44px; padding: 0 .25rem;
+    background: none; border: 0;
+    color: var(--hueso);
+    font-family: var(--f-display); font-size: 1.0625rem; font-weight: 500; letter-spacing: .02em;
+    text-decoration: underline; text-decoration-color: transparent; text-underline-offset: .3em; text-decoration-thickness: 1px;
+    transition: text-decoration-color .15s var(--ease);
+  }
+  .nav__indice:hover { text-decoration-color: var(--hueso); }
+  :global(html:not(.js)) .nav__indice { display: none; }
+
+  /* ——— índice ——— */
+  .indice {
+    margin: 0 0 0 auto; inset: 0 0 0 auto;
+    width: min(100vw, 30rem); max-width: 100vw; height: 100dvh; max-height: 100dvh;
+    padding: 0 var(--margin) var(--e-1);
+    background: var(--grafito); color: var(--hueso);
+    border: 0; border-left: var(--borde);
+  }
+  .indice::backdrop { background: rgb(11 13 14 / .72); }
+  .indice__cabeza { height: 56px; display: flex; align-items: center; justify-content: space-between; }
+  .indice__titulo { color: var(--ceniza); }
+  .indice__cerrar {
+    min-height: 44px; padding: 0 .25rem; background: none; border: 0; color: var(--hueso);
+    font-family: var(--f-display); font-size: 1.0625rem; font-weight: 500; letter-spacing: .02em;
+  }
+  .indice__lista { display: flex; flex-direction: column; margin-top: var(--e-1); border-top: var(--borde); }
+  .indice__enlace {
+    display: flex; align-items: center; min-height: 64px;
+    border-bottom: var(--borde);
+    font-family: var(--f-display); font-size: var(--t-h3); font-weight: 480; line-height: 1; letter-spacing: -.01em;
+    text-decoration: none; color: var(--hueso);
+    transition: color .15s var(--ease);
+  }
+  .indice__enlace:hover { color: var(--aluminio); }
+</style>

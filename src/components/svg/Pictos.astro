@@ -1,7 +1,59 @@
 ---
-// STUB de WP0 — lo completa WP4 (§3.9). Pictograma de carga de 28 px, línea de 1 px.
+// Pictogramas de carga (§3.9): 28 px, línea de 1 px, de perfil y sin relleno.
+// Dibujo propio y sobrio: siluetas de oficio, no iconos de app. Todos apoyan
+// en la misma línea de suelo (y = 21) para que el segmentado lea parejo.
+// Contrato de props (lo usan otros paquetes; no cambiar):
 //   carga: 'moto' | 'quad' | 'barco' | 'coche'
+//   class?: string
 interface Props { carga: 'moto' | 'quad' | 'barco' | 'coche'; class?: string }
-const { class: cls } = Astro.props;
+const { carga, class: cls } = Astro.props;
 ---
-<svg class:list={['picto', cls]} width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"></svg>
+<svg
+  class:list={['picto', `picto--${carga}`, cls]}
+  width="28" height="28" viewBox="0 0 28 28"
+  fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+  aria-hidden="true" focusable="false"
+>
+  {carga === 'moto' && (
+    <g>
+      <circle cx="6.5" cy="17.5" r="3.5" />
+      <circle cx="21.5" cy="17.5" r="3.5" />
+      <path d="M6.5 17.5 L10.5 12.5 H15.5 L17.5 10.5" />
+      <path d="M10.5 12.5 L13 17.5 H16.5 L18.5 12.5" />
+      <path d="M21.5 17.5 L18 8.5 H20.5" />
+      <path d="M9 11 H13" />
+    </g>
+  )}
+  {carga === 'quad' && (
+    <g>
+      <circle cx="7" cy="18" r="3" />
+      <circle cx="21" cy="18" r="3" />
+      <path d="M3.5 14.5 H10 L12 12 H17 L19.5 14.5 H24.5" />
+      <path d="M3.5 14.5 V16 M24.5 14.5 V16" />
+      <path d="M17 12 L18.5 8.5 H21" />
+      <path d="M11 18 H17" />
+    </g>
+  )}
+  {carga === 'barco' && (
+    <g>
+      <path d="M3 13.5 H25 L22 19.5 H7.5 Z" />
+      <path d="M9.5 13.5 V10 H15.5 L17.5 13.5" />
+      <path d="M2.5 22.5 Q5.5 21.5 8.5 22.5 T14.5 22.5 T20.5 22.5 T26 22.5" />
+    </g>
+  )}
+  {carga === 'coche' && (
+    <g>
+      <circle cx="8" cy="18.5" r="2.5" />
+      <circle cx="20.5" cy="18.5" r="2.5" />
+      <path d="M5.5 18.5 H3.5 V14.5 L7.5 13.5 L10.5 9.5 H18 L21.5 13.5 L24.5 14.2 V18.5 H23" />
+      <path d="M10.5 18.5 H18" />
+      <path d="M10.5 13.5 H21.5" />
+    </g>
+  )}
+</svg>
+
+<style>
+  .picto { flex: none; overflow: visible; }
+  /* 1 px real a cualquier escala del contenedor */
+  .picto :global(*) { vector-effect: non-scaling-stroke; }
+</style>

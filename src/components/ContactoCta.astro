@@ -1,4 +1,107 @@
 ---
-// STUB de WP0 — lo completa WP4 (§2.8).
+// Bloque CTA del cierre (§2.8). Dueño: WP4. Se monta en el slot "cta" de
+// CapCierre (WP3), en flujo detrás de la pista: nunca hay un CTA invisible que
+// reciba foco. Sin teléfono gigante: el protagonista es el WhatsApp con su
+// subrayado-cincha, que se tensa (se endereza) en hover y foco.
+import { calcularPrecio, urlWhatsApp } from '../lib/precio.js';
+import { CARGA_DEFECTO, DESTINO_DEFECTO } from '../data/tarifas.js';
+import { TEL, TEL_TXT, EMAIL } from '../data/contacto.js';
+
+type CargaId = 'moto' | 'quad' | 'barco' | 'coche';
+const r = calcularPrecio({ carga: CARGA_DEFECTO as CargaId, destino: DESTINO_DEFECTO, vuelta: false });
 ---
-<div class="cta cap--carbon"><p class="entrada">Cuéntanos qué es, dónde está y adónde va, y te contestamos con el precio.</p></div>
+
+<div class="cta cap--carbon">
+  <div class="rejilla cta__rejilla">
+    <p class="entrada cta__entrada">Cuéntanos qué es, dónde está y adónde va, y te contestamos con el precio.</p>
+
+    <a class="cta__wa" data-wa href={urlWhatsApp(r)} target="_blank" rel="noopener">
+      <span class="cta__wa-txt">Escríbenos por WhatsApp</span>
+      <svg class="cta__subrayado" viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path d="M1.5 3 Q500 7 998.5 3" />
+      </svg>
+    </a>
+
+    <div class="cta__secundarios">
+      <a class="cta__enlace" href={`tel:${TEL}`}>Llamar · {TEL_TXT}</a>
+      <div class="cta__correo">
+        <a class="cta__enlace" href={`mailto:${EMAIL}`}>{EMAIL}</a>
+        <button class="cta__copiar" type="button" data-copiar={EMAIL} hidden>Copiar</button>
+        <span class="nota cta__aviso" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <p class="cta__resumen" data-cta-resumen hidden>
+      <span class="cta__resumen-txt">Tu cálculo: <span class="cifra" data-precio="resumen">{r.resumen}</span></span>
+      <span class="nota">Tarifa provisional</span>
+    </p>
+  </div>
+</div>
+
+<style>
+  .cta { position: relative; padding-block: var(--e-4) var(--e-5); }
+  .cta__rejilla { row-gap: var(--e-2); align-items: start; }
+  .cta__entrada { grid-column: 1 / -1; max-width: 34ch; }
+  .cta__wa {
+    grid-column: 1 / -1;
+    justify-self: start;
+    position: relative;
+    display: inline-block; padding-bottom: calc(.3em + 8px);
+    color: var(--hueso); text-decoration: none;
+    font-family: var(--f-display); font-size: var(--t-cta); font-weight: 440; line-height: .95; letter-spacing: -.015em;
+    outline-offset: 8px;
+  }
+  /* absoluto: el viewBox de 1000 no debe dictar el ancho del enlace */
+  .cta__subrayado { position: absolute; left: 0; bottom: 0; width: 100%; height: 8px; overflow: visible; }
+  .cta__subrayado path {
+    fill: none; stroke: var(--cincha); stroke-width: 3; stroke-linecap: butt;
+    vector-effect: non-scaling-stroke;
+    /* La comba (2 px en el centro) se endereza aplastándola contra la línea de
+       los extremos (y = 3): el trazo sigue siendo de 3 px por non-scaling-stroke. */
+    transform-box: view-box; transform-origin: 0 3px;
+    transition: transform .2s var(--ease);
+  }
+  .cta__wa:hover .cta__subrayado path, .cta__wa:focus-visible .cta__subrayado path { transform: scaleY(.01); }
+  :global(html.reducido) .cta__subrayado path { transition: none; }
+
+  .cta__secundarios {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 2.5rem;
+  }
+  .cta__enlace {
+    display: inline-flex; align-items: center; min-height: 48px;
+    color: var(--hueso);
+    font-family: var(--f-display); font-size: 1.375rem; font-weight: 500; letter-spacing: .01em;
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .28em;
+    text-decoration-color: var(--junta);
+    transition: text-decoration-color .15s var(--ease);
+  }
+  .cta__enlace:hover { text-decoration-color: var(--hueso); }
+  .cta__correo { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+  .cta__copiar {
+    min-height: 40px; padding: 0 .875rem;
+    background: none; color: var(--hueso);
+    border: var(--borde); border-radius: var(--r-s);
+    font-family: var(--f-display); font-weight: 600; font-size: var(--t-etiqueta);
+    letter-spacing: .06em; text-transform: uppercase;
+    transition: border-color .15s var(--ease);
+  }
+  .cta__copiar:hover { border-color: var(--aluminio); }
+  .cta__aviso:empty { display: none; }
+
+  .cta__resumen {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem;
+    padding-top: var(--e-1);
+    border-top: var(--borde);
+    color: var(--hueso);
+  }
+  .cta__resumen[hidden] { display: none; }
+  .cta__resumen-txt { font-size: var(--t-cuerpo); }
+
+  @media (min-width: 1024px) {
+    .cta__entrada { grid-column: 2 / 9; }
+    .cta__wa { grid-column: 2 / -1; }
+    .cta__secundarios, .cta__resumen { grid-column: 2 / 12; }
+  }
+</style>

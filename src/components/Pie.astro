@@ -1,4 +1,45 @@
 ---
-// STUB de WP0 — lo completa WP4 (§2.8).
+// Pie (§2.8). Dueño: WP4. Sin animación. Los avisos legales van como texto,
+// no como enlaces falsos, hasta que existan.
 ---
-<footer class="pie"><p class="nota">Calzo · Transporte de motos, quads y embarcaciones · Madrid · Toda España</p></footer>
+
+<footer class="pie">
+  <div class="rejilla pie__rejilla">
+    <p class="pie__marca">
+      <svg class="pie__simbolo" viewBox="3 4 26 24" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4" />
+        <path d="M4 27 L15 27 L9 20 Z M28 27 L17 27 L23 20 Z" fill="currentColor" />
+      </svg>
+      <span>CALZO</span>
+    </p>
+    <div class="pie__lineas">
+      <p class="pie__linea">Calzo · Transporte de motos, quads y embarcaciones · Madrid · Toda España</p>
+      <p class="nota">Nombre provisional · Tarifas orientativas y provisionales</p>
+      <p class="nota">Aviso legal · Privacidad (pendientes)</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .pie {
+    position: relative; z-index: var(--z-main);
+    background: var(--carbon);
+    border-top: var(--borde);
+    padding-block: var(--e-2);
+  }
+  /* En compacto, la barra fija de 64 px no tapa la última línea. */
+  :global(html.js.compacto) .pie { padding-bottom: calc(var(--e-2) + 64px + env(safe-area-inset-bottom, 0px)); }
+  .pie__rejilla { row-gap: 1.25rem; align-items: start; }
+  .pie__marca {
+    grid-column: 1 / -1;
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-family: var(--f-display); font-size: 20px; font-weight: 560; letter-spacing: .04em; line-height: 1;
+  }
+  .pie__simbolo { width: 22px; height: 22px; }
+  .pie__lineas { grid-column: 1 / -1; display: flex; flex-direction: column; gap: .375rem; }
+  .pie__linea { font-size: 1rem; line-height: 1.4; }
+  @media (min-width: 1024px) {
+    .pie__marca { grid-column: 1 / 4; }
+    .pie__lineas { grid-column: 4 / -1; }
+  }
+</style>

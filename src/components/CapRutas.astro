@@ -1,6 +1,182 @@
 ---
-// STUB de WP0 — lo completa WP5 (§2.7).
+// 07 · Rutas (§2.7). Dueño: WP5. La rosa se calcula entera en el build
+// (lib/rosa.js): rumbo geográfico real, longitud por km de carretera y
+// etiquetas ya relajadas. El cliente (capitulos/rutas.ts) solo aísla rayos,
+// escribe la línea de lectura y lleva al panel.
+import Flecha from './svg/Flecha.astro';
+import { rosa, C, R_MAX, KM_MAX } from '../lib/rosa.js';
+import { calcularPrecio, formatoKm } from '../lib/precio.js';
+import { DESTINO_DEFECTO, CARGA_DEFECTO, DESTINOS } from '../data/tarifas.js';
+
+const { rayos } = rosa();
+// Anillos de escala: la distancia es el dato que dibujan los rayos.
+const anillos = [250, 500, 750].map((km) => ({ km, r: Math.round((R_MAX * km / KM_MAX) * 10) / 10 }));
+
+// Línea de lectura por defecto: la misma carga y destino que el resto de la página sin JS.
+const def = calcularPrecio({ carga: CARGA_DEFECTO, destino: DESTINO_DEFECTO, vuelta: false });
+const nombreDef = DESTINOS.find((d) => d.id === DESTINO_DEFECTO)?.nombre ?? '';
+const lectura = `Madrid – ${nombreDef} · ${def.kmTxt} · unas ${def.duracionTxt} · ${CARGA_DEFECTO} desde ${def.totalTxt}`;
+const s = (n: number) => String(n);
 ---
 <section id="rutas" class="cap cap--grafito cap--flujo" data-cap="rutas" aria-labelledby="rutas-h">
-  <div class="rejilla"><h2 id="rutas-h" class="h2" style="grid-column: 1 / -1">Salimos de Madrid hacia toda España.</h2></div>
+  <div class="rejilla rutas">
+    <div class="rutas__texto">
+      <h2 id="rutas-h" class="h2">Salimos de Madrid hacia toda España.</h2>
+      <p class="entrada rutas__entrada">Toda la península por carretera y Baleares con ferry. La vuelta suma un 65&nbsp;% sobre la ida.</p>
+    </div>
+
+    <figure class="rutas__figura">
+      <svg class="rutas__rosa" viewBox="0 0 800 800" role="group" aria-label="Rosa de rutas desde Madrid a 25 destinos">
+        <g class="rutas__escala" aria-hidden="true">
+          {anillos.map((a) => <circle cx={C} cy={C} r={a.r} />)}
+          <line x1={C} y1={C - R_MAX - 6} x2={C} y2={C - R_MAX + 6} />
+          <text class="rutas__norte" x={C} y={C - R_MAX - 14} text-anchor="middle">N</text>
+          {anillos.map((a) => (
+            <text class="rutas__km" x={C - a.r} y={C + 4} text-anchor="middle">{a.km}</text>
+          ))}
+          <text class="rutas__km" x={C - R_MAX + 2} y={C + 22} text-anchor="middle">km</text>
+        </g>
+
+        <g class="rutas__rayos">
+          {rayos.map((r) => (
+            <a
+              class:list={['rutas__rayo', { 'rutas__rayo--nautico': r.nautico }]}
+              href="#precio"
+              data-destino={r.id}
+              aria-label={`Madrid – ${r.nombre}, ${formatoKm(r.km)}${r.maritimo ? ' con ferry' : ''}. Calcular el precio`}
+            >
+              <path class="rutas__zona" d={r.d} />
+              {r.ferry && <path class="rutas__zona" d={r.ferry.d} />}
+              <path class="rutas__linea" d={r.d} pathLength="1" data-revelar="trazo" data-revelar-dur={s(r.dur)} />
+              {r.ferry && (
+                <path class="rutas__mar" d={r.ferry.d}
+                  data-revelar="fundido" data-revelar-dur="0.3" data-revelar-delay={s(r.dur)} />
+              )}
+              <g data-revelar="fundido" data-revelar-dur="0.3" data-revelar-delay={s(r.ferry ? r.dur + 0.3 : r.dur)}>
+                <circle class:list={['rutas__punto', { 'rutas__punto--hueco': r.nautico }]}
+                  cx={r.fin.x} cy={r.fin.y} r={r.nautico ? 4.5 : 3.2} />
+                {r.etiqueta.guia && (
+                  <line class="rutas__guia" x1={r.etiqueta.guia[0]} y1={r.etiqueta.guia[1]}
+                    x2={r.etiqueta.guia[2]} y2={r.etiqueta.guia[3]} />
+                )}
+                <text class="rutas__etq" x={r.etiqueta.x} y={r.etiqueta.y}
+                  text-anchor="middle" dominant-baseline="central">{r.nombre}</text>
+                {r.ferry && (
+                  <text class="rutas__etq rutas__etq--ferry" x={r.ferry.etiqueta.x} y={r.ferry.etiqueta.y}
+                    text-anchor="middle" dominant-baseline="central">+ ferry</text>
+                )}
+              </g>
+            </a>
+          ))}
+        </g>
+
+        <g class="rutas__origen" aria-hidden="true">
+          <circle class="rutas__origen-aro" cx={C} cy={C} r="9" />
+          <circle class="rutas__origen-punto" cx={C} cy={C} r="4.5" />
+          <text class="rutas__etq rutas__etq--origen" x={C - 18} y={C} text-anchor="end" dominant-baseline="central">Madrid</text>
+        </g>
+      </svg>
+
+      <figcaption class="rutas__pie">
+        <p class="cifra rutas__lectura">{lectura}</p>
+        <a class="rutas__tabla" href="#tarifas"><span>Ver los 25 destinos en tabla</span><Flecha /></a>
+      </figcaption>
+    </figure>
+  </div>
 </section>
+
+<style>
+  .rutas { row-gap: var(--e-2); align-items: start; }
+  .rutas__texto { grid-column: 1 / -1; }
+  .rutas__entrada { margin-top: var(--e-1); color: var(--hueso); }
+  .rutas__figura {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 92vw;
+    max-width: 800px;
+  }
+  @media (min-width: 1024px) {
+    .rutas__texto { grid-column: 1 / 6; padding-top: var(--e-1); }
+    .rutas__figura { grid-column: 6 / 13; width: 100%; justify-self: end; }
+  }
+
+  .rutas__rosa { width: 100%; height: auto; overflow: visible; }
+  .rutas__rosa :is(circle, line, path) { vector-effect: non-scaling-stroke; }
+
+  .rutas__escala { fill: none; stroke: var(--junta); stroke-width: 1px; }
+  .rutas__escala text { stroke: none; }
+  .rutas__km, .rutas__norte {
+    fill: var(--ceniza);
+    font-family: var(--f-cifras);
+    font-size: 11px;
+    paint-order: stroke;
+    stroke: var(--grafito) !important;
+    stroke-width: 6px;
+  }
+  .rutas__norte { font-family: var(--f-display); font-weight: 600; font-size: 12px; letter-spacing: .06em; }
+
+  .rutas__rayo { transition: opacity .15s var(--ease); outline-offset: 0; }
+  .rutas__zona {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 20px;
+    stroke-linecap: round;
+    pointer-events: stroke;
+  }
+  .rutas__linea { fill: none; stroke: var(--aluminio); stroke-width: 1px; }
+  .rutas__mar { fill: none; stroke: var(--aluminio); stroke-width: 1.25px; stroke-dasharray: 1.5 4.5; stroke-linecap: round; }
+  .rutas__punto { fill: var(--hueso); stroke: none; }
+  .rutas__punto--hueco { fill: var(--grafito); stroke: var(--hueso); stroke-width: 1.25px; }
+  .rutas__guia { stroke: var(--ceniza); stroke-width: 1px; }
+  .rutas__etq {
+    fill: var(--hueso);
+    font-family: var(--f-display);
+    font-weight: 520;
+    font-size: 13px;
+    paint-order: stroke;
+    stroke: var(--grafito);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .rutas__etq--ferry { fill: var(--ceniza); font-size: 11px; }
+  .rutas__etq--origen { font-weight: 600; font-size: 14px; }
+  .rutas__origen-punto { fill: var(--hueso); }
+  .rutas__origen-aro { fill: var(--grafito); stroke: var(--aluminio); stroke-width: 1px; }
+
+  /* aislado (150 ms): el rayo activo en pleno y en hueso, el resto al 20 % */
+  .rutas__rosa.aislando .rutas__rayo:not(.es-activo) { opacity: .2; }
+  .rutas__rayo.es-activo .rutas__linea { stroke: var(--hueso); }
+  .rutas__rayo.es-activo .rutas__mar { stroke: var(--hueso); }
+  .rutas__rayo:focus-visible { outline: none; }
+  .rutas__rayo:focus-visible .rutas__zona { stroke: color-mix(in srgb, var(--hueso) 14%, transparent); }
+
+  /* compacto: la rosa es un dibujo; la interfaz es la tabla */
+  :global(html.compacto) .rutas__rayo { pointer-events: none; }
+  :global(html.compacto) .rutas__zona { pointer-events: none; }
+
+  .rutas__pie {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: .75rem 2rem;
+    margin-top: var(--e-1);
+    padding-top: 1rem;
+    border-top: var(--borde);
+  }
+  .rutas__lectura { color: var(--hueso); min-height: 1.4em; }
+  .rutas__tabla {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-family: var(--f-texto);
+    font-size: var(--t-cuerpo);
+    color: var(--hueso);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: .25em;
+    text-decoration-color: var(--ceniza);
+  }
+  .rutas__tabla:hover { text-decoration-color: var(--hueso); }
+</style>

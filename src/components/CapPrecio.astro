@@ -1,7 +1,559 @@
 ---
-// STUB de WP0 — lo completa WP4 (§2.3, §6).
+// 03 · Precio (§2.3, §6). Dueño: WP4.
+// Un panel sólido atado por las cuatro cinchas del traspaso: el marco deja el
+// margen (--amarre-dx/dy) donde viven las anillas y las cintas en flujo, y el
+// panel es un form#calc real con controles nativos. Todo lo que se ve sin tocar
+// nada (205 €, el mensaje de WhatsApp, la tabla de 25 destinos) sale del build.
+import { calcularPrecio, urlWhatsApp, tablaPrecios } from '../lib/precio.js';
+import {
+  DESTINOS, CARGAS, ESLORA_MIN, ESLORA_MAX, ESLORA_PASO, ESLORA_DEFECTO,
+  DESTINO_DEFECTO, CARGA_DEFECTO,
+} from '../data/tarifas.js';
+import { TEL, TEL_TXT } from '../data/contacto.js';
+import Pictos from './svg/Pictos.astro';
+import Chevron from './svg/Chevron.astro';
+import Flecha from './svg/Flecha.astro';
+import QuadPlanta from './svg/QuadPlanta.astro';
+import BarcoSeccion from './svg/BarcoSeccion.astro';
+
+type CargaId = 'moto' | 'quad' | 'barco' | 'coche';
+const r = calcularPrecio({ carga: CARGA_DEFECTO as CargaId, destino: DESTINO_DEFECTO, vuelta: false });
+const wa = urlWhatsApp(r);
+const destino = DESTINOS.find((d) => d.id === DESTINO_DEFECTO)!;
+
+// Select: dos grupos en orden alfabético español (§6.2).
+type Destino = (typeof DESTINOS)[number] & { nautico?: boolean; maritimo?: boolean };
+const orden = (a: { nombre: string }, b: { nombre: string }) => a.nombre.localeCompare(b.nombre, 'es');
+const lista = DESTINOS as readonly Destino[];
+const peninsula = lista.filter((d) => !d.nautico).sort(orden);
+const nauticos = lista.filter((d) => d.nautico).sort(orden);
+const etiquetaDestino = (d: Destino) =>
+  `${d.nombre} — ${d.km} km${d.maritimo ? ' · ferry' : d.nautico ? ' · puerto' : ''}`;
+
+// Tabla de tarifas (§6.6), la única de la web: la rosa de rutas enlaza aquí.
+const tabla = tablaPrecios().sort(orden);
+
+const marcas: number[] = [];
+for (let m = ESLORA_MIN; m <= ESLORA_MAX; m++) marcas.push(m);
+const coma = (n: number) => String(n).replace('.', ',');
+
+const fraccion = Math.min(1, r.km / 750);
+const NB = ' ';
 ---
-<section id="precio" class="cap cap--carbon cap--flujo" data-cap="precio" aria-labelledby="precio-h">
-  <div class="rejilla"><h2 id="precio-h" class="h2" style="grid-column: 1 / -1">Cuánto cuesta.</h2>
-  <p class="entrada" style="grid-column: 1 / -1">Elige qué llevamos y adónde; el precio se calcula al momento.</p></div>
+
+<section id="precio" class="cap cap--carbon cap--flujo precio" data-cap="precio" aria-labelledby="precio-h">
+  <div class="rejilla">
+    <div class="precio__marco">
+      <div class="precio__panel" data-lenis-prevent>
+        <form id="calc" class="precio__form" action="#tarifas">
+          <div class="precio__mandos">
+            <header class="precio__cabecera">
+              <h2 id="precio-h" class="h2">Cuánto cuesta.</h2>
+              <p class="entrada">Elige qué llevamos y adónde; el precio se calcula al momento.</p>
+            </header>
+
+            <div class="precio__controles">
+              <fieldset class="campo">
+                <legend class="etiqueta campo__etiqueta">Qué llevamos</legend>
+                <div class="segmentado segmentado--4">
+                  {CARGAS.map((c) => (
+                    <label class="segmento segmento--carga">
+                      <input class="segmento__input" type="radio" name="carga" value={c.id} checked={c.id === r.entrada.carga} />
+                      <Pictos carga={c.id as CargaId} />
+                      <span class="segmento__txt">{c.nombre}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div class="campo">
+                <label class="etiqueta campo__etiqueta" for="destino">Adónde, desde Madrid</label>
+                <div class="select">
+                  <select id="destino" name="destino" data-destino-select>
+                    <optgroup label="Península">
+                      {peninsula.map((d) => <option value={d.id} selected={d.id === r.entrada.destino}>{etiquetaDestino(d)}</option>)}
+                    </optgroup>
+                    <optgroup label="Náuticos y Baleares">
+                      {nauticos.map((d) => <option value={d.id} selected={d.id === r.entrada.destino}>{etiquetaDestino(d)}</option>)}
+                    </optgroup>
+                  </select>
+                  <Chevron class="select__chevron" />
+                </div>
+              </div>
+
+              <div class="precio__barco">
+                <div class="precio__barco-in">
+                  <div class="campo">
+                    <div class="campo__cabeza">
+                      <label class="etiqueta campo__etiqueta" for="eslora">Eslora</label>
+                      <output class="cifra precio__eslora" for="eslora">{coma(ESLORA_DEFECTO)}{NB}m</output>
+                    </div>
+                    <input
+                      class="rango" type="range" id="eslora" name="eslora"
+                      min={ESLORA_MIN} max={ESLORA_MAX} step={ESLORA_PASO} value={ESLORA_DEFECTO}
+                      list="eslora-marcas"
+                    />
+                    <datalist id="eslora-marcas">
+                      {marcas.map((m) => <option value={m} label={`${m} m`}></option>)}
+                    </datalist>
+                    <div class="rango__marcas cifra" aria-hidden="true">
+                      <span>{ESLORA_MIN}{NB}m</span><span>{ESLORA_MAX}{NB}m</span>
+                    </div>
+                  </div>
+                  <div class="campo campo--manga">
+                    <label class="casilla">
+                      <input class="casilla__input" type="checkbox" id="manga" name="manga" aria-describedby="manga-nota" />
+                      <span class="casilla__caja" aria-hidden="true"></span>
+                      <span class="casilla__txt">Manga de más de 2,55 m</span>
+                      <span class="precio__testigo" aria-hidden="true"></span>
+                    </label>
+                    <p class="nota precio__manga-nota" id="manga-nota">Autorización complementaria de circulación: la tramitamos y va en el precio</p>
+                  </div>
+                </div>
+              </div>
+
+              <fieldset class="campo">
+                <legend class="etiqueta campo__etiqueta">Viaje</legend>
+                <div class="segmentado segmentado--2">
+                  <label class="segmento">
+                    <input class="segmento__input" type="radio" name="viaje" value="ida" checked />
+                    <span class="segmento__txt">Solo ida</span>
+                  </label>
+                  <label class="segmento">
+                    <input class="segmento__input" type="radio" name="viaje" value="vuelta" />
+                    <span class="segmento__txt">Ida y vuelta</span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+
+          <div class="precio__lectura">
+            <div class="precio__cifra-bloque">
+              <p class="etiqueta precio__desde">Desde</p>
+              <div class="precio__cifra-fila">
+                <output class="precio__cifra" for="destino eslora manga" aria-live="polite">
+                  <span class="precio__cifra-v es-activa" aria-hidden="true">{r.totalTxt}</span>
+                  <span class="precio__cifra-v" aria-hidden="true"></span>
+                  <span class="sr">{r.totalTxt}</span>
+                </output>
+                <span class="nota precio__provisional" hidden={!r.provisional}>Tarifa provisional</span>
+              </div>
+            </div>
+
+            <div class="precio__resultado">
+              <div class="regla" style={`--f: ${fraccion.toFixed(4)}`} aria-hidden="true">
+                <div class="regla__rotulos">
+                  <span class="etiqueta">Madrid</span>
+                  <div class="regla__fin"><span class="etiqueta regla__destino">{destino.nombre}</span></div>
+                </div>
+                <div class="regla__traza">
+                  <div class="regla__pista"></div>
+                  <div class="regla__ida"></div>
+                  <div class="regla__tope regla__tope--ini"></div>
+                  <div class="regla__fin"><div class="regla__tope"></div></div>
+                </div>
+                <div class="regla__vuelta"><div class="regla__vuelta-in"></div></div>
+                <div class="regla__medio"><span class="cifra regla__km">{r.kmTxt}</span></div>
+              </div>
+
+              <p class="cifra precio__linea">
+                <span data-precio="km">{r.kmTxt}</span> · unas <span data-precio="duracion">{r.duracionTxt}</span> de carretera<span class="precio__por-trayecto" hidden> · por trayecto</span><span class="precio__ferry" hidden> · incluye ferry</span>
+              </p>
+              <p class="precio__incluye">Incluye parte de estado con fotos y seguro por valor declarado.</p>
+
+              <details class="precio__desglose">
+                <summary class="precio__desglose-titulo">Cómo sale este número<svg class="precio__desglose-chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" /></svg></summary>
+                <ol class="precio__lineas cifra">
+                  {r.lineas.map((l) => {
+                    const i = l.txt.lastIndexOf(' = ') >= 0 ? l.txt.lastIndexOf(' = ') : l.txt.indexOf(': ');
+                    const sep = l.txt.lastIndexOf(' = ') >= 0 ? 3 : 2;
+                    return i >= 0
+                      ? <li data-linea={l.id}><span>{l.txt.slice(0, i)}</span><span class="precio__guia" aria-hidden="true"></span><span>{l.txt.slice(i + sep)}</span></li>
+                      : <li data-linea={l.id}><span>{l.txt}</span></li>;
+                  })}
+                </ol>
+              </details>
+
+              <div class="precio__lamina">
+                <QuadPlanta mini class="precio__lamina-quad" />
+                <BarcoSeccion mini class="precio__lamina-barco" />
+              </div>
+            </div>
+
+            <div class="precio__accion">
+              <a class="precio__wa" data-wa href={wa} target="_blank" rel="noopener">
+                <span>Reservar por WhatsApp</span><Flecha />
+              </a>
+              <a class="precio__tel" href={`tel:${TEL}`}>Llamar · {TEL_TXT}</a>
+              <p class="nota precio__legal">Precio orientativo por distancia y tipo de carga. Se confirma al ver el punto de recogida.</p>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Cinchas en flujo (§5.6.8): 1 unidad = 1 px del marco. Las escribe capitulos/precio.ts. -->
+      <svg class="precio__amarre" aria-hidden="true" focusable="false">
+        <g class="precio__cinchas">
+          {[0, 1, 2, 3].map((i) => (
+            <g data-cincha={i}>
+              <path class="precio__cinta" d="" />
+              <path class="precio__tejido" d="" fill="url(#tejido)" />
+              <path class="precio__carraca" d="" />
+            </g>
+          ))}
+        </g>
+        <g class="precio__anillas">
+          {[0, 1, 2, 3].map(() => <circle class="precio__anilla" cx="0" cy="0" r="5" />)}
+        </g>
+      </svg>
+    </div>
+
+    <!-- Siempre en el HTML, nunca en <noscript> (§6.6). Con JS, precio.ts lo cierra al arrancar. -->
+    <details id="tarifas" class="tarifas" open>
+      <summary class="tarifas__resumen">
+        <span>Tarifas orientativas desde Madrid, en tabla</span>
+        <svg class="tarifas__chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" /></svg>
+      </summary>
+      <div class="tarifas__cuerpo">
+        <div class="tarifas__tabla-caja">
+          <table class="tarifas__tabla">
+            <caption class="sr">Tarifas orientativas desde Madrid por destino y tipo de carga, solo ida</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="etiqueta">Destino</th>
+                <th scope="col" class="etiqueta num">Distancia</th>
+                <th scope="col" class="etiqueta num">En carretera</th>
+                <th scope="col" class="etiqueta num">Moto</th>
+                <th scope="col" class="etiqueta num">Quad/UTV</th>
+                <th scope="col" class="etiqueta num">Coche</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tabla.map((t) => (
+                <tr id={`tarifa-${t.id}`}>
+                  <th scope="row">{t.nombre}{t.maritimo ? <span class="tarifas__tipo"> · ferry</span> : t.nautico ? <span class="tarifas__tipo"> · puerto</span> : null}</th>
+                  <td class="cifra num">{t.kmTxt}</td>
+                  <td class="cifra num">{t.duracionTxt}</td>
+                  <td class="cifra num">{t.moto}</td>
+                  <td class="cifra num">{t.quad}</td>
+                  <td class="cifra num">{t.coche}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="nota tarifas__nota">Barco: desde 140 € + 0,85 €/km, mínimo 290 €; +6 % por metro de eslora sobre 6 m; +35 % con manga de más de 2,55 m. Palma: +320 € de ferry.</p>
+      </div>
+    </details>
+  </div>
 </section>
+
+<style>
+  /* ——— marco y panel ——— */
+  .precio__marco {
+    grid-column: 1 / -1;
+    position: relative;
+    padding: var(--amarre-dy) var(--amarre-dx);
+  }
+  @media (min-width: 1024px) {
+    .precio__marco { grid-column: 2 / 12; }
+  }
+  .precio__panel {
+    position: relative;
+    background: var(--grafito-alto);
+    border-radius: var(--r-m);
+    padding: var(--e-1);
+    transform-origin: 50% 100%;
+  }
+  .precio__form {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gutter);
+  }
+  .precio__mandos { grid-column: 1 / 6; display: flex; flex-direction: column; gap: var(--e-2); }
+  .precio__lectura {
+    grid-column: 6 / 13;
+    display: flex; flex-direction: column; gap: 1.75rem;
+    padding-left: var(--e-1);
+    border-left: var(--borde);
+  }
+  .precio__cabecera { display: flex; flex-direction: column; gap: 1.25rem; }
+  .precio__cabecera .entrada { color: var(--hueso); max-width: 26ch; }
+  .precio__controles { display: flex; flex-direction: column; gap: 1.75rem; }
+
+  /* ——— campos ——— */
+  .campo { display: flex; flex-direction: column; gap: .625rem; }
+  .campo__etiqueta { color: var(--ceniza); }
+  .campo__cabeza { display: flex; justify-content: space-between; align-items: baseline; }
+
+  .segmentado { display: grid; border: var(--borde); border-radius: var(--r-s); }
+  .segmentado--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .segmentado--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .segmento {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 56px; padding: 4px 2px;
+    color: var(--ceniza);
+    border: 1px solid transparent;
+    margin: -1px;
+    border-radius: var(--r-s);
+    cursor: pointer;
+    transition: background-color .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease);
+  }
+  .segmentado--2 .segmento { min-height: 48px; }
+  .segmento__input {
+    position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer;
+  }
+  .segmento__txt {
+    font-family: var(--f-display); font-weight: 600; font-size: var(--t-etiqueta);
+    letter-spacing: .05em; text-transform: uppercase; line-height: 1.1; text-align: center;
+  }
+  .segmentado--2 .segmento__txt { font-weight: 500; font-size: 1rem; letter-spacing: .01em; text-transform: none; }
+  .segmento:hover { color: var(--hueso); }
+  .segmento:has(.segmento__input:checked) {
+    color: var(--hueso);
+    background: rgb(228 230 227 / .08);
+    border-color: var(--hueso);
+    z-index: 1;
+  }
+  .segmento:has(.segmento__input:focus-visible) { outline: 2px solid var(--hueso); outline-offset: 3px; z-index: 2; }
+
+  .select { position: relative; }
+  .select select {
+    appearance: none; -webkit-appearance: none;
+    width: 100%; min-height: 56px;
+    padding: .75rem 2.5rem .75rem 1rem;
+    background: var(--grafito-alto); color: var(--hueso);
+    border: var(--borde); border-radius: var(--r-s);
+    font-family: var(--f-texto); font-size: 1.125rem; font-weight: 400;
+    cursor: pointer;
+    transition: border-color .15s var(--ease);
+  }
+  .select select:hover { border-color: var(--aluminio); }
+  .select option, .select optgroup { background: var(--grafito-alto); color: var(--hueso); }
+  .select :global(.select__chevron) { position: absolute; right: 1rem; top: 50%; translate: 0 -50%; pointer-events: none; color: var(--aluminio); }
+
+  /* bloque de barco: se despliega en 260 ms (única transición de altura del panel) */
+  .precio__barco {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows .26s var(--ease);
+    margin-block: -.875rem; /* anula el gap del contenedor mientras está plegado */
+  }
+  .precio__barco-in {
+    min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; gap: 1.25rem;
+    visibility: hidden;
+    transition: visibility 0s linear .26s;
+  }
+  :global(html.carga-barco) .precio__barco { grid-template-rows: 1fr; margin-block: 0; }
+  :global(html.carga-barco) .precio__barco-in { visibility: visible; transition: none; overflow: visible; }
+  :global(html.reducido) .precio__barco, :global(html.reducido) .precio__barco-in { transition: none; }
+
+  .precio__eslora { color: var(--hueso); }
+  .rango {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 48px; margin: 0;
+    background: transparent; cursor: pointer;
+  }
+  .rango::-webkit-slider-runnable-track { height: 1px; background: var(--aluminio); }
+  .rango::-moz-range-track { height: 1px; background: var(--aluminio); }
+  .rango::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 28px; margin-top: -13.5px;
+    background: var(--hueso); border: 0; border-radius: var(--r-s);
+  }
+  .rango::-moz-range-thumb { width: 14px; height: 28px; background: var(--hueso); border: 0; border-radius: var(--r-s); }
+  .rango__marcas { display: flex; justify-content: space-between; color: var(--ceniza); font-size: var(--t-etiqueta); margin-top: -.5rem; }
+
+  .casilla { position: relative; display: flex; align-items: center; gap: .75rem; min-height: 48px; cursor: pointer; }
+  .casilla__input { position: absolute; left: 0; top: 50%; width: 22px; height: 22px; margin: -11px 0 0; opacity: 0; cursor: pointer; }
+  .casilla__caja {
+    flex: none; width: 22px; height: 22px;
+    border: 1px solid var(--aluminio); border-radius: var(--r-s);
+    display: grid; place-items: center;
+  }
+  .casilla__caja::after {
+    content: ''; width: 10px; height: 5px;
+    border-left: 1.5px solid var(--hueso); border-bottom: 1.5px solid var(--hueso);
+    transform: translateY(-1px) rotate(-45deg);
+    opacity: 0;
+  }
+  .casilla__input:checked + .casilla__caja { border-color: var(--hueso); }
+  .casilla__input:checked + .casilla__caja::after { opacity: 1; }
+  .casilla__input:focus-visible + .casilla__caja { outline: 2px solid var(--hueso); outline-offset: 3px; }
+  .casilla__txt { font-size: 1.0625rem; }
+  /* testigo de manga: 10 px de naranja, sin halo ni parpadeo (§3.7) */
+  .precio__testigo {
+    flex: none; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--cincha);
+    visibility: hidden;
+  }
+  .casilla__input:checked ~ .precio__testigo { visibility: visible; }
+  .precio__manga-nota { display: none; max-width: 34ch; }
+  :global(html.manga-ancha) .precio__manga-nota { display: block; }
+
+  /* ——— lectura ——— */
+  .precio__cifra-bloque { display: flex; flex-direction: column; gap: .5rem; }
+  .precio__desde { color: var(--ceniza); }
+  .precio__cifra-fila { display: flex; align-items: flex-end; flex-wrap: wrap; gap: .5rem 1.25rem; }
+  .precio__cifra {
+    display: grid;
+    font-family: var(--f-cifras); font-size: var(--t-precio); font-weight: 400;
+    font-variant-numeric: tabular-nums; line-height: .9; letter-spacing: -.03em;
+    white-space: nowrap;
+  }
+  .precio__cifra-v {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transition: opacity .18s var(--ease);
+  }
+  .precio__cifra-v.es-activa { opacity: 1; }
+  :global(html.reducido) .precio__cifra-v { transition: none; }
+  .precio__provisional { padding-bottom: .35em; }
+
+  /* regla de distancia: longitud km/750 por transform, sin transición (§6.2) */
+  .regla { --f: .4733; display: flex; flex-direction: column; gap: .5rem; }
+  .regla__rotulos { position: relative; display: flex; color: var(--ceniza); min-height: 1.2em; }
+  .regla__rotulos > .etiqueta:first-child { position: relative; z-index: 1; }
+  .regla__fin {
+    position: absolute; inset: 0;
+    display: flex; justify-content: flex-end;
+    transform: translateX(calc((var(--f) - 1) * 100%));
+  }
+  .regla__destino { color: var(--hueso); white-space: nowrap; }
+  .regla__traza { position: relative; height: 11px; }
+  .regla__pista { position: absolute; left: 0; right: 0; top: 5px; height: 1px; background: var(--junta); }
+  .regla__ida {
+    position: absolute; left: 0; right: 0; top: 4.5px; height: 2px; background: var(--hueso);
+    transform-origin: 0 50%; transform: scaleX(var(--f));
+  }
+  .regla__tope { position: absolute; top: 0; right: 0; width: 1px; height: 11px; background: var(--hueso); }
+  .regla__tope--ini { left: 0; right: auto; }
+  .regla__vuelta { position: relative; height: 1px; overflow: hidden; display: none; }
+  .regla__vuelta-in {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, var(--aluminio) 0 6px, transparent 6px 11px);
+    transform: translateX(calc((var(--f) - 1) * 100%));
+  }
+  .regla.es-vuelta .regla__vuelta { display: block; }
+  .regla__medio { display: flex; justify-content: center; transform: translateX(calc((var(--f) / 2 - .5) * 100%)); }
+  .regla__km { color: var(--hueso); white-space: nowrap; }
+
+  .precio__resultado { display: flex; flex-direction: column; gap: 1.25rem; }
+  .precio__linea { color: var(--hueso); }
+  .precio__incluye { font-size: 1.0625rem; line-height: 1.45; max-width: 40ch; }
+
+  .precio__desglose { border-top: var(--borde); border-bottom: var(--borde); }
+  .precio__desglose-titulo {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    min-height: 48px; cursor: pointer; list-style: none;
+    font-family: var(--f-display); font-weight: 600; font-size: var(--t-etiqueta);
+    letter-spacing: .06em; text-transform: uppercase; color: var(--hueso);
+  }
+  .precio__desglose-titulo::-webkit-details-marker { display: none; }
+  .precio__desglose[open] .precio__desglose-chevron { transform: rotate(180deg); }
+  .precio__lineas { display: flex; flex-direction: column; gap: .35rem; padding: .25rem 0 1rem; color: var(--hueso); font-size: .875rem; }
+  /* las líneas las rehace precio.ts: sin el atributo de ámbito de Astro, van en :global */
+  .precio__lineas :global(li) { display: flex; align-items: baseline; gap: .5rem; }
+  .precio__lineas :global(li > span:first-child) { flex: none; white-space: nowrap; }
+  .precio__lineas :global(li > span:last-child:not(:first-child)) { flex: 0 1 auto; text-align: right; }
+  .precio__lineas :global(.precio__guia) { flex: 1 0 1.5rem; border-bottom: 1px dotted var(--ceniza); transform: translateY(-.3em); }
+  .precio__lineas :global(li[data-linea="redondeo"]) { color: var(--ceniza); }
+
+  .precio__lamina { display: none; color: var(--aluminio); max-width: 240px; }
+  .precio__lamina :global(svg) { width: 100%; height: auto; }
+  .precio__lamina :global(.precio__lamina-quad), .precio__lamina :global(.precio__lamina-barco) { display: none; }
+  :global(html.carga-quad) .precio__lamina, :global(html.carga-barco) .precio__lamina { display: block; }
+  :global(html.carga-quad) .precio__lamina :global(.precio__lamina-quad) { display: block; }
+  :global(html.carga-barco) .precio__lamina :global(.precio__lamina-barco) { display: block; }
+
+  .precio__accion { display: flex; flex-direction: column; gap: .75rem; margin-top: auto; padding-top: .5rem; }
+  .precio__wa {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    min-height: 56px; padding: 0 1.25rem;
+    background: var(--cincha); color: var(--carbon);
+    border-radius: var(--r-s);
+    font-family: var(--f-display); font-weight: 600; font-size: 1.25rem; letter-spacing: .01em;
+    text-decoration: none;
+  }
+  .precio__wa :global(.flecha) { flex: none; }
+  .precio__tel {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 48px; padding: 0 1.25rem;
+    border: 1px solid var(--junta); border-radius: var(--r-s);
+    color: var(--hueso); text-decoration: none;
+    font-family: var(--f-display); font-weight: 500; font-size: 1.0625rem; letter-spacing: .02em;
+    transition: border-color .15s var(--ease);
+  }
+  .precio__tel:hover { border-color: var(--aluminio); }
+  .precio__legal { max-width: 46ch; }
+
+  /* ——— cinchas en flujo (§5.6.8): encima del panel, como el overlay ——— */
+  .precio__amarre {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    overflow: visible; pointer-events: none; z-index: 1;
+  }
+  .precio__cinchas { visibility: hidden; }
+  .precio__amarre.es-visible .precio__cinchas { visibility: visible; }
+  .precio__cinta { fill: var(--cincha); }
+  .precio__tejido { opacity: .35; }
+  .precio__carraca { fill: var(--grafito-alto); stroke: var(--aluminio); stroke-width: 1; stroke-linejoin: round; }
+  .precio__anilla { fill: none; stroke: var(--aluminio); stroke-width: 1.5; }
+  :global(html:not(.js)) .precio__amarre { display: none; }
+
+  /* ——— tabla de tarifas ——— */
+  .tarifas { grid-column: 1 / -1; margin-top: var(--e-2); border-top: var(--borde); }
+  @media (min-width: 1024px) {
+    .tarifas { grid-column: 2 / 12; }
+  }
+  .tarifas__resumen {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    min-height: 56px; cursor: pointer; list-style: none;
+    font-family: var(--f-display); font-weight: 500; font-size: 1.25rem; letter-spacing: .01em;
+  }
+  .tarifas__resumen::-webkit-details-marker { display: none; }
+  .tarifas[open] .tarifas__chevron { transform: rotate(180deg); }
+  .tarifas__cuerpo { padding-bottom: var(--e-1); display: flex; flex-direction: column; gap: .75rem; }
+  .tarifas__tabla-caja { overflow-x: auto; }
+  .tarifas__tabla { width: 100%; min-width: 34rem; }
+  .tarifas__tabla th, .tarifas__tabla td {
+    padding: .5rem .75rem .5rem 0; text-align: left; border-bottom: var(--borde); font-weight: 400;
+  }
+  .tarifas__tabla thead th { color: var(--ceniza); font-weight: 600; }
+  .tarifas__tabla tbody th { font-size: 1.0625rem; }
+  .tarifas__tabla .num { text-align: right; }
+  .tarifas__tabla th:last-child, .tarifas__tabla td:last-child { padding-right: 0; }
+  .tarifas__tipo { color: var(--ceniza); font-size: var(--t-etiqueta); }
+
+  /* ——— sin JS (§6.6): fuera los mandos y la lectura, que no pueden recalcular ——— */
+  :global(html:not(.js)) .precio__controles,
+  :global(html:not(.js)) .precio__cifra-bloque,
+  :global(html:not(.js)) .precio__resultado { display: none; }
+  :global(html:not(.js)) #tarifas > :not(summary) { display: block; }
+  :global(html:not(.js)) #tarifas > summary { display: none; }
+
+  /* ——— compacto: una columna; la cifra, pegada arriba del panel (§2.9, §6.2) ——— */
+  @media (max-width: 1023.98px) {
+    .precio__form { display: flex; flex-direction: column; gap: 1.75rem; }
+    .precio__mandos, .precio__lectura { display: contents; }
+    .precio__cabecera { order: 1; }
+    .precio__cifra-bloque { order: 2; }
+    .precio__controles { order: 3; }
+    .precio__resultado { order: 4; }
+    .precio__accion { order: 5; }
+  }
+  :global(html.compacto) .precio__form { display: flex; flex-direction: column; gap: 1.75rem; }
+  :global(html.compacto) .precio__mandos, :global(html.compacto) .precio__lectura { display: contents; }
+  :global(html.compacto) .precio__cabecera { order: 1; }
+  :global(html.compacto) .precio__cifra-bloque { order: 2; }
+  :global(html.compacto) .precio__controles { order: 3; }
+  :global(html.compacto) .precio__resultado { order: 4; }
+  :global(html.compacto) .precio__accion { order: 5; }
+  :global(html.js.compacto) .precio__cifra-bloque {
+    position: sticky; top: 56px; z-index: 2;
+    margin-inline: calc(-1 * var(--e-1)); padding: .75rem var(--e-1);
+    background: var(--grafito-alto);
+    border-bottom: var(--borde);
+  }
+</style>
